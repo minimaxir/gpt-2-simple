@@ -1,0 +1,5 @@
+fire>=0.1.3
+regex
+requests
+tqdm
+numpy
