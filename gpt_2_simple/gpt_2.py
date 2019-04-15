@@ -1,6 +1,5 @@
 import os
 import json
-import sys
 import requests
 from tqdm import tqdm
 import numpy as np
@@ -203,7 +202,7 @@ def finetune(sess,
         while True:
             if counter == steps:
                 save()
-                sys.exit()
+                return
             if counter % save_every == 0:
                 save()
             if counter % sample_every == 0:
