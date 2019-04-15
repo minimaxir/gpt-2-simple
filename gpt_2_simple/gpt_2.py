@@ -41,6 +41,13 @@ def download_gpt2(model_name='117M'):
                     pbar.update(chunk_size)
 
 
+def start_tf_sess():
+    "Returns a tf.Session w/ config"
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+    return tf.Session(config=config)
+
+
 def finetune(sess,
              dataset,
              steps=-1,
@@ -79,8 +86,6 @@ def finetune(sess,
         raise ValueError(
             "Can't get samples longer than window size: %s" % hparams.n_ctx)
 
-    config = tf.ConfigProto()
-    config.gpu_options.allow_growth = True
     context = tf.placeholder(tf.int32, [batch_size, None])
     output = model.model(hparams=hparams, X=context)
     loss = tf.reduce_mean(

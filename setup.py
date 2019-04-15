@@ -21,5 +21,5 @@ setup(
     license='MIT',
     python_requires='>=3.5',
     include_package_data=True,
-    install_requires=['fire>=0.1.3', 'regex', 'requests', 'tqdm', 'numpy']
+    install_requires=['regex', 'requests', 'tqdm', 'numpy']
 )

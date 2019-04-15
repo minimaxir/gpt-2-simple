@@ -24,12 +24,11 @@ Warning: the pretrained model is a ~500MB download!
 
 ```python
 import gpt_2_simple as gpt2
-import tensorflow as tf
 
 gpt2.download_gpt2()   # model is saved into current directory under /117M/
 
-sess = tf.Session(graph=tf.Graph())
-gpt2.finetune(sess, 'shakespeare.txt', steps=5000)   # steps is max number of training steps
+sess = gpt2.start_tf_sess()
+gpt2.finetune(sess, 'shakespeare.txt', steps=100)   # steps is max number of training steps
 
 gpt2.load_gpt2(sess)
 text = gpt2.generate()
