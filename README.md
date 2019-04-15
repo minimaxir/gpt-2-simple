@@ -50,6 +50,9 @@ NB: *Restart the Python session first* if you want to finetune on another datase
 
 ## Helpful Tips
 
+* You can encode the text if you want it to behave specially.
+* If you are encoding text documents (as opposed to one large text), it's recommended you end each document with a `<|endoftext|>` token, as that's what the source GPT-2 data does, and it is what it is used to start predictions.
+
 ## Maintainer/Creator
 
 Max Woolf ([@minimaxir](http://minimaxir.com))

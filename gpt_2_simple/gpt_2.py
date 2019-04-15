@@ -1,10 +1,18 @@
 import os
 import json
 import requests
+import sys
+import shutil
 from tqdm import tqdm
 import numpy as np
 import tensorflow as tf
 import time
+
+# if in Google Colaboratory
+try:
+    from google.colab import drive
+except:
+    pass
 
 from gpt_2_simple.src import model, sample, encoder
 from gpt_2_simple.src.load_dataset import load_dataset, Sampler
@@ -351,3 +359,17 @@ def generate_to_file(sess,
              length,
              temperature,
              top_k)
+
+
+def mount_gdrive():
+    """Mounts the user's Google Drive in Colaboratory."""
+    assert 'drive' in sys.modules, "You must be in Colaboratory to mount your Google Drive"
+
+    drive.mount('/content/drive')
+
+
+def copy_checkpoint_gdrive(checkpoint_folder=os.path.join('checkpoint', 'run1')):
+    """Mounts the user's Google Drive in Colaboratory."""
+    assert 'drive' in sys.modules, "You must be in Colaboratory to mount your Google Drive"
+
+    shutil.copytree(checkpoint_folder, "/content/drive" + checkpoint_folder)
