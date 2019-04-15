@@ -42,7 +42,9 @@ def download_gpt2(model_name='117M'):
 
 
 def start_tf_sess():
-    "Returns a tf.Session w/ config"
+    """
+    Returns a tf.Session w/ config
+    """
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
     return tf.Session(config=config)
@@ -61,7 +63,8 @@ def finetune(sess,
              sample_every=100,
              sample_length=1023,
              sample_num=1,
-             save_every=1000):
+             save_every=1000,
+             model_load=False):
     """Finetunes the model on the given dataset.
 
     Adapted from https://github.com/nshepperd/gpt-2/blob/finetuning/train.py.
@@ -138,6 +141,9 @@ def finetune(sess,
         ckpt = tf.train.latest_checkpoint(restore_from)
     print('Loading checkpoint', ckpt)
     saver.restore(sess, ckpt)
+
+    if model_load:
+        return
 
     print('Loading dataset...')
     chunks = load_dataset(enc, dataset, combine)
@@ -239,9 +245,7 @@ def load_gpt2(sess,
     for repeated predictions.
     """
 
-    saver = tf.train.Saver()
-    ckpt = tf.train.latest_checkpoint(checkpoint_path)
-    saver.restore(sess, ckpt)
+    finetune(sess, '', model_load=True)
 
 
 def generate(sess,
