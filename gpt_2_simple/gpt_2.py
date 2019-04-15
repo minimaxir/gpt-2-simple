@@ -249,8 +249,9 @@ def load_gpt2(sess,
 
 def generate(sess,
              return_as_list=False,
+             destination_path=None,
              sample_delim='=' * 20 + '\n',
-             prefix='<|endoftext|>',
+             prefix=None,
              model_name='117M',
              seed=None,
              nsamples=1,
@@ -270,6 +271,9 @@ def generate(sess,
     if nsamples == 1:
         sample_delim = ''
 
+    if prefix:
+        context = tf.placeholder(tf.int32, [batch_size, None])
+
     enc = encoder.get_encoder(model_name)
     hparams = model.default_hparams()
     with open(os.path.join('models', model_name, 'hparams.json')) as f:
@@ -280,21 +284,38 @@ def generate(sess,
 
     output = sample.sample_sequence(
         hparams=hparams, length=length,
-        start_token=enc.encoder[prefix],
+        start_token=enc.encoder['<|endoftext|>'] if not prefix else None,
+        context=context if prefix else None,
         batch_size=batch_size,
         temperature=temperature, top_k=top_k
     )[:, 1:]
 
+    if destination_path:
+        f = open(destination_path, 'w')
+    if prefix:
+        context_tokens = enc.encode(prefix)
     generated = 0
     gen_texts = []
     while generated < nsamples:
-        out = sess.run(output)
+        if not prefix:
+            out = sess.run(output)
+        else:
+            out = sess.run(output, feed_dict={
+                    context: [context_tokens for _ in range(batch_size)]
+                })[:, len(context_tokens):]
         for i in range(batch_size):
             generated += batch_size
             gen_text = enc.decode(out[i])
-            if not return_as_list:
+            if prefix:
+                gen_text = prefix + gen_text
+            if destination_path:
+                f.write("{}\n{}".format(gen_text, sample_delim))
+            if not return_as_list and not destination_path:
                 print("{}\n{}".format(gen_text, sample_delim))
             gen_texts.append(gen_text)
+
+    if destination_path:
+        f.close()
 
     if return_as_list:
         return gen_texts
@@ -303,7 +324,7 @@ def generate(sess,
 def generate_to_file(sess,
                      destination_path='gpt_2_gen_texts.txt',
                      sample_delim='=' * 20 + '\n',
-                     prefix='<|endoftext|>',
+                     prefix=None,
                      model_name='117M',
                      seed=None,
                      nsamples=1,
@@ -318,18 +339,15 @@ def generate_to_file(sess,
     Adapted from https://github.com/minimaxir/textgenrnn/blob/master/textgenrnn/textgenrnn.py
     """
 
-    texts = generate(sess,
-                     True,
-                     sample_delim,
-                     prefix,
-                     model_name,
-                     seed,
-                     nsamples,
-                     batch_size,
-                     length,
-                     temperature,
-                     top_k)
-
-    with open(destination_path, 'w') as f:
-        for text in texts:
-            f.write("{}\n{}".format(text, sample_delim))
+    generate(sess,
+             False,
+             destination_path,
+             sample_delim,
+             prefix,
+             model_name,
+             seed,
+             nsamples,
+             batch_size,
+             length,
+             temperature,
+             top_k)
