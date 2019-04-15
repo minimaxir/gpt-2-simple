@@ -2,7 +2,7 @@
 
 A simple Python package that wraps existing model fine-tuning and generation scripts for [OpenAI](https://openai.com)'s [GPT-2 text generation model](https://openai.com/blog/better-language-models/) (specifically the "small", 117M hyperparameter version). Additionally, this package allows easier generation of text, allowing for prefixes, generating text of any length.
 
-This package incorporates:
+This package incorporates and makes minimal low-level changes to:
 
 * Model management from OpenAI's [official GPT-2 repo](https://github.com/openai/gpt-2) (MIT License)
 * Model finetuning from Neil Shepperd's [fork](https://github.com/nshepperd/gpt-2) of GPT-2 (MIT License)

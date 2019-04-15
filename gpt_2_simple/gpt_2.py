@@ -7,9 +7,9 @@ import numpy as np
 import tensorflow as tf
 import time
 
-from src import model, sample, encoder
-from src.load_dataset import load_dataset, Sampler
-from src.accumulate import AccumulatingOptimizer
+from gpt_2_simple.src import model, sample, encoder
+from gpt_2_simple.src.load_dataset import load_dataset, Sampler
+from gpt_2_simple.src.accumulate import AccumulatingOptimizer
 
 
 def download_gpt2(model_name='117M'):
@@ -229,8 +229,7 @@ def finetune(sess,
 
 
 def load_gpt2(sess,
-              model_name="117M",
-              checkpoint_path=os.path.join('models', model_name)):
+              checkpoint_path=os.path.join('models', '117M')):
     """Loads the model checkpoint into a TensorFlow session
     for repeated predictions.
     """
