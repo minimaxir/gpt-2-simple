@@ -48,6 +48,10 @@ text = gpt2.generate(sess)
 
 NB: *Restart the Python session first* if you want to finetune on another dataset or load another model.
 
+## Helpful Tips
+
+* If you want to set a `prefix` when generating text so the generated text starts with a specific phrase, make sure to start that prefix itself with `<|endoftext|>`. (e.g. if you want to start with "Hello there", pass `<|endoftext|>Hello there`)
+
 ## Maintainer/Creator
 
 Max Woolf ([@minimaxir](http://minimaxir.com))

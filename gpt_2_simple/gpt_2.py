@@ -248,6 +248,8 @@ def load_gpt2(sess,
 
 
 def generate(sess,
+             return_as_list=False,
+             sample_delim='=' * 20 + '\n',
              prefix='<|endoftext|>',
              model_name='117M',
              seed=None,
@@ -264,6 +266,9 @@ def generate(sess,
     if batch_size is None:
         batch_size = 1
     assert nsamples % batch_size == 0
+
+    if nsamples == 1:
+        sample_delim = ''
 
     enc = encoder.get_encoder(model_name)
     hparams = model.default_hparams()
@@ -286,6 +291,45 @@ def generate(sess,
         out = sess.run(output)
         for i in range(batch_size):
             generated += batch_size
-            gen_texts.append(enc.decode(out[i]))
+            gen_text = enc.decode(out[i])
+            if not return_as_list:
+                print("{}\n{}".format(gen_text, sample_delim))
+            gen_texts.append(gen_text)
 
-    return gen_texts
+    if return_as_list:
+        return gen_texts
+
+
+def generate_to_file(sess,
+                     destination_path='gpt_2_gen_texts.txt',
+                     sample_delim='=' * 20 + '\n',
+                     prefix='<|endoftext|>',
+                     model_name='117M',
+                     seed=None,
+                     nsamples=1,
+                     batch_size=1,
+                     length=None,
+                     temperature=1,
+                     top_k=0):
+    """Generates the texts to a file.
+
+    sample_delim separates texts: set to '' if each text is a small document.
+
+    Adapted from https://github.com/minimaxir/textgenrnn/blob/master/textgenrnn/textgenrnn.py
+    """
+
+    texts = generate(sess,
+                     True,
+                     sample_delim,
+                     prefix,
+                     model_name,
+                     seed,
+                     nsamples,
+                     batch_size,
+                     length,
+                     temperature,
+                     top_k)
+
+    with open(destination_path, 'w') as f:
+        for text in texts:
+            f.write("{}\n{}".format(text, sample_delim))
