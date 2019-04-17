@@ -3,6 +3,7 @@ import json
 import requests
 import sys
 import shutil
+import re
 from tqdm import tqdm
 import numpy as np
 import tensorflow as tf
@@ -257,6 +258,7 @@ def load_gpt2(sess,
 
 def generate(sess,
              return_as_list=False,
+             truncate=None,
              destination_path=None,
              sample_delim='=' * 20 + '\n',
              prefix=None,
@@ -264,7 +266,7 @@ def generate(sess,
              seed=None,
              nsamples=1,
              batch_size=1,
-             length=None,
+             length=1024,
              temperature=1,
              top_k=0):
     """Generates text from a model loaded into memory.
@@ -309,13 +311,16 @@ def generate(sess,
             out = sess.run(output)
         else:
             out = sess.run(output, feed_dict={
-                    context: [context_tokens for _ in range(batch_size)]
-                })[:, len(context_tokens):]
+                    context: batch_size * [context_tokens]
+                })
         for i in range(batch_size):
             generated += batch_size
             gen_text = enc.decode(out[i])
             if prefix:
                 gen_text = prefix + gen_text
+            if truncate:
+                gen_text = re.search(r'(.*?)(?:{})'.format(truncate),
+                                     gen_text, re.S).group(1)
             if destination_path:
                 f.write("{}\n{}".format(gen_text, sample_delim))
             if not return_as_list and not destination_path:
@@ -330,6 +335,7 @@ def generate(sess,
 
 
 def generate_to_file(sess,
+                     truncate=None,
                      destination_path='gpt_2_gen_texts.txt',
                      sample_delim='=' * 20 + '\n',
                      prefix=None,
@@ -337,7 +343,7 @@ def generate_to_file(sess,
                      seed=None,
                      nsamples=1,
                      batch_size=1,
-                     length=None,
+                     length=1024,
                      temperature=1,
                      top_k=0):
     """Generates the texts to a file.
@@ -348,6 +354,7 @@ def generate_to_file(sess,
     """
 
     generate(sess,
+             truncate,
              False,
              destination_path,
              sample_delim,
@@ -363,13 +370,39 @@ def generate_to_file(sess,
 
 def mount_gdrive():
     """Mounts the user's Google Drive in Colaboratory."""
-    assert 'drive' in sys.modules, "You must be in Colaboratory to mount your Google Drive"
+    assert 'google.colab' in sys.modules, "You must be in Colaboratory to mount your Google Drive"
 
     drive.mount('/content/drive')
 
 
-def copy_checkpoint_gdrive(checkpoint_folder=os.path.join('checkpoint', 'run1')):
-    """Mounts the user's Google Drive in Colaboratory."""
-    assert 'drive' in sys.modules, "You must be in Colaboratory to mount your Google Drive"
+def is_mounted():
+    """Checks if the Google Drive is mounted."""
+    assert os.path.isdir('/content/drive'), "You must mount first using mount_gdrive()"
 
-    shutil.copytree(checkpoint_folder, "/content/drive" + checkpoint_folder)
+
+def copy_checkpoint_to_gdrive(checkpoint_folder=os.path.join('checkpoint', 'run1')):
+    """Copies the checkpoint folder to a mounted Google Drive."""
+    is_mounted()
+
+    shutil.copytree(checkpoint_folder, "/content/drive/My Drive/" + checkpoint_folder)
+
+
+def copy_checkpoint_from_gdrive(checkpoint_folder=os.path.join('checkpoint', 'run1')):
+    """Copies the checkpoint folder from a mounted Google Drive."""
+    is_mounted()
+
+    shutil.copytree("/content/drive/My Drive/" + checkpoint_folder, checkpoint_folder)
+
+
+def copy_file_to_gdrive(file_path):
+    """Copies a file to a mounted Google Drive."""
+    is_mounted()
+
+    shutil.copyfile(file_path, "/content/drive/My Drive/" + file_path)
+
+
+def copy_file_from_gdrive(file_path):
+    """Copies a file from a mounted Google Drive."""
+    is_mounted()
+
+    shutil.copyfile("/content/drive/My Drive/" + file_path, file_path)
