@@ -317,7 +317,7 @@ def generate(sess,
             generated += batch_size
             gen_text = enc.decode(out[i])
             if prefix:
-                gen_text = prefix + gen_text
+                gen_text = prefix[0] + gen_text
             if truncate:
                 trunc_text = re.search(r'(.*?)(?:{})'.format(truncate),
                                      gen_text, re.S)
