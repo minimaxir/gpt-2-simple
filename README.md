@@ -50,23 +50,20 @@ NB: *Restart the Python session first* if you want to finetune on another datase
 
 ## Differences Between gpt-2-simple And Other Text Generation Utilities
 
-The method GPT-2 uses to generate text is slightly different than those like other packages like textgenrnn, and cannot easily be fixed without hacking the underlying model code:
+The method GPT-2 uses to generate text is slightly different than those like other packages like textgenrnn (specifically, generating the sequences purely in the GPU and decoding them later), and cannot easily be fixed without hacking the underlying model code:
 
 * GPT-2 can only generate a maximum of 1024 tokens per request.
 * GPT-2 cannot stop early upon reaching a specific end token. (workaround: pass the `truncate` parameter to a `generate` function to only collect text until a specified end token)
 * Higher temperatures work better (e.g. 0.7 - 1.0) to generate more interesting text (while other frameworks work better between 0.2 - 0.5)
-
-## Helpful Tips
-
-* You can encode the text if you want it to behave specially.
-* If you are encoding text documents (as opposed to one large text), it's recommended you end each document with a `<|endoftext|>` token, as that's what the source GPT-2 data does, and it is what it is used to start predictions.
+* When finetuning GPT-2, it has no sense of the beginning or end of a document within a larger text. You'll need to use a bespoke character sequence to indicate the beginning and end of a document. Then while generating, you can specify a `prefix` targeting the beginning token sequences, and a `truncate` targeting the end token sequence.
+* GPT-2 allows you to generate texts in parallel by setting a `batch_size` that is divisible into `nsamples`. Works well with a GPU (can set `batch_size` to > 10)!
 
 ## Planned Work
 
 Note: this project is intended to have a very tight scope unless demand dictates otherwise.
 
 * Allow users to generate texts longer than 1024 tokens.
-* Allow users to use Colaboratory's TPU.
+* Allow users to use Colaboratory's TPU for finetuning.
 
 ## Maintainer/Creator
 

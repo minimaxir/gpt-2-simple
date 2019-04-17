@@ -267,7 +267,7 @@ def generate(sess,
              nsamples=1,
              batch_size=1,
              length=1024,
-             temperature=1,
+             temperature=0.7,
              top_k=0):
     """Generates text from a model loaded into memory.
 
@@ -344,7 +344,7 @@ def generate_to_file(sess,
                      nsamples=1,
                      batch_size=1,
                      length=1024,
-                     temperature=1,
+                     temperature=0.7,
                      top_k=0):
     """Generates the texts to a file.
 
@@ -354,8 +354,8 @@ def generate_to_file(sess,
     """
 
     generate(sess,
-             truncate,
              False,
+             truncate,
              destination_path,
              sample_delim,
              prefix,
