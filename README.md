@@ -50,7 +50,7 @@ NB: *Restart the Python session first* if you want to finetune on another datase
 
 ## Differences Between gpt-2-simple And Other Text Generation Utilities
 
-The method GPT-2 uses to generate text is slightly different than those like other packages like textgenrnn (specifically, generating the sequences purely in the GPU and decoding them later), and cannot easily be fixed without hacking the underlying model code:
+The method GPT-2 uses to generate text is slightly different than those like other packages like textgenrnn (specifically, generating full sequence purely in the GPU and decoding it later), and cannot easily be fixed without hacking the underlying model code. As a result:
 
 * GPT-2 can only generate a maximum of 1024 tokens per request.
 * GPT-2 cannot stop early upon reaching a specific end token. (workaround: pass the `truncate` parameter to a `generate` function to only collect text until a specified end token)

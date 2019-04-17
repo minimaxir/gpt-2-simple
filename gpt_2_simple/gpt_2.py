@@ -319,8 +319,10 @@ def generate(sess,
             if prefix:
                 gen_text = prefix + gen_text
             if truncate:
-                gen_text = re.search(r'(.*?)(?:{})'.format(truncate),
-                                     gen_text, re.S).group(1)
+                trunc_text = re.search(r'(.*?)(?:{})'.format(truncate),
+                                     gen_text, re.S)
+                if trunc_text:
+                    gen_text = trunc_text.group(1)
             if destination_path:
                 f.write("{}\n{}".format(gen_text, sample_delim))
             if not return_as_list and not destination_path:
