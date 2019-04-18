@@ -52,12 +52,12 @@ NB: *Restart the Python session first* if you want to finetune on another datase
 
 The method GPT-2 uses to generate text is slightly different than those like other packages like textgenrnn (specifically, generating full sequence purely in the GPU and decoding it later), and cannot easily be fixed without hacking the underlying model code. As a result:
 
-* In general, GPT-2 is better at maintaining context over its entire gereration length, making it good for generating conversational text.
+* In general, GPT-2 is better at maintaining context over its entire gereration length, making it good for generating conversational text. The text is also generally gramatically correct, with proper capitalization and few typoes.
 * GPT-2 can only generate a maximum of 1024 tokens per request (about 3-4 paragraphs of English text).
 * GPT-2 cannot stop early upon reaching a specific end token. (workaround: pass the `truncate` parameter to a `generate` function to only collect text until a specified end token)
 * Higher temperatures work better (e.g. 0.7 - 1.0) to generate more interesting text (while other frameworks work better between 0.2 - 0.5)
 * When finetuning GPT-2, it has no sense of the beginning or end of a document within a larger text. You'll need to use a bespoke character sequence to indicate the beginning and end of a document. Then while generating, you can specify a `prefix` targeting the beginning token sequences, and a `truncate` targeting the end token sequence.
-* GPT-2 allows you to generate texts in parallel by setting a `batch_size` that is divisible into `nsamples`, resulting in much faster generation (but note that the total number of output samples will be equal to `nsamples`/`batch_size`). Works very well with a GPU (can set `batch_size` to ~20 on Colaboratory's K80)!
+* GPT-2 allows you to generate texts in parallel by setting a `batch_size` that is divisible into `nsamples`, resulting in much faster generation. Works very well with a GPU (can set `batch_size` to ~20 on Colaboratory's K80)!
 
 ## Planned Work
 

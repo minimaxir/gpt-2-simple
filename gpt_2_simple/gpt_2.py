@@ -314,13 +314,13 @@ def generate(sess,
                     context: batch_size * [context_tokens]
                 })
         for i in range(batch_size):
-            generated += batch_size
+            generated += 1
             gen_text = enc.decode(out[i])
             if prefix:
                 gen_text = prefix[0] + gen_text
             if truncate:
                 trunc_text = re.search(r'(.*?)(?:{})'.format(truncate),
-                                     gen_text, re.S)
+                                       gen_text, re.S)
                 if trunc_text:
                     gen_text = trunc_text.group(1)
             if destination_path:
