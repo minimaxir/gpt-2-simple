@@ -10,13 +10,17 @@ This package incorporates and makes minimal low-level changes to:
 
 For finetuning, it is **strongly** recommended to use a GPU, although you can generate using a CPU (albeit much more slowly). If you are training in the cloud, using a Colaboratory notebook or a Google Compute Engine VM w/ the [TensorFlow Deep Learning](https://cloud.google.com/deep-learning-vm/) image is strongly recommended. (as the GPT-2 model is hosted on GCP)
 
-## Usage
+## Install
 
-gpt-2-simple can be installed via pip:
+gpt-2-simple can be installed via PyPi:
 
 ```shell
-pip3 install gpt-2-simple
+pip3 install gpt_2_simple
 ```
+
+You will also need to install the corresponding TensorFlow for your system (e.g. `tensorflow` or `tensorflow-gpu`)
+
+## Usage
 
 An example for downloading the model to the local system, fineturning it on a dataset. and generating some text.
 
@@ -25,7 +29,7 @@ Warning: the pretrained model, and thus any finetuned model, is 500 MB!
 ```python
 import gpt_2_simple as gpt2
 
-gpt2.download_gpt2()   # model is saved into current directory under /117M/
+gpt2.download_gpt2()   # model is saved into current directory under /models/117M/
 
 sess = gpt2.start_tf_sess()
 gpt2.finetune(sess, 'shakespeare.txt', steps=1000)   # steps is max number of training steps
@@ -57,12 +61,12 @@ NB: *Restart the Python session first* if you want to finetune on another datase
 
 ## Differences Between gpt-2-simple And Other Text Generation Utilities
 
-The method GPT-2 uses to generate text is slightly different than those like other packages like textgenrnn (specifically, generating full sequence purely in the GPU and decoding it later), and cannot easily be fixed without hacking the underlying model code. As a result:
+The method GPT-2 uses to generate text is slightly different than those like other packages like textgenrnn (specifically, generating the full text sequence purely in the GPU and decoding it later), which cannot easily be fixed without hacking the underlying model code. As a result:
 
 * In general, GPT-2 is better at maintaining context over its entire gereration length, making it good for generating conversational text. The text is also generally gramatically correct, with proper capitalization and few typoes.
 * The original GPT-2 model was trained on a *very* large variety of sources, allowing the model to incorporate trends not seen in the input text.
 * GPT-2 can only generate a maximum of 1024 tokens per request (about 3-4 paragraphs of English text).
-* GPT-2 cannot stop early upon reaching a specific end token. (workaround: pass the `truncate` parameter to a `generate` function to only collect text until a specified end token)
+* GPT-2 cannot stop early upon reaching a specific end token. (workaround: pass the `truncate` parameter to a `generate` function to only collect text until a specified end token. You may want to reduce `length` appropriately.)
 * Higher temperatures work better (e.g. 0.7 - 1.0) to generate more interesting text, while other frameworks work better between 0.2 - 0.5.
 * When finetuning GPT-2, it has no sense of the beginning or end of a document within a larger text. You'll need to use a bespoke character sequence to indicate the beginning and end of a document. Then while generating, you can specify a `prefix` targeting the beginning token sequences, and a `truncate` targeting the end token sequence.
 * GPT-2 allows you to generate texts in parallel by setting a `batch_size` that is divisible into `nsamples`, resulting in much faster generation. Works very well with a GPU (can set `batch_size` up to 20 on Colaboratory's K80)!
@@ -71,8 +75,8 @@ The method GPT-2 uses to generate text is slightly different than those like oth
 
 Note: this project is intended to have a very tight scope unless demand dictates otherwise.
 
-* Allow users to generate texts longer than 1024 tokens.
-* Allow users to use Colaboratory's TPU for finetuning.
+* Allow users to generate texts longer than 1024 tokens. ([GitHub Issue](https://github.com/minimaxir/gpt-2-simple/issues/2))
+* Allow users to use Colaboratory's TPU for finetuning. ([GitHub Issue](https://github.com/minimaxir/gpt-2-simple/issues/3))
 * Allow users to use multiple GPUs (e.g. Horovod)
 * For Colaboratory, allow model to automatically save checkpoints to Google Drive during training to prevent timeouts.
 
