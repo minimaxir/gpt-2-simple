@@ -72,6 +72,7 @@ def finetune(sess,
              sample_length=1023,
              sample_num=1,
              save_every=1000,
+             max_checkpoints=1,
              model_load=False):
     """Finetunes the model on the given dataset.
 
@@ -131,8 +132,7 @@ def finetune(sess,
 
     saver = tf.train.Saver(
         var_list=train_vars,
-        max_to_keep=5,
-        keep_checkpoint_every_n_hours=2)
+        max_to_keep=max_checkpoints)
     sess.run(tf.global_variables_initializer())
 
     if restore_from == 'latest':
