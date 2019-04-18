@@ -72,6 +72,7 @@ def finetune(sess,
              sample_length=1023,
              sample_num=1,
              save_every=1000,
+             print_every=1,
              max_checkpoints=1,
              model_load=False):
     """Finetunes the model on the given dataset.
@@ -83,15 +84,23 @@ def finetune(sess,
     CHECKPOINT_DIR = 'checkpoint'
     SAMPLE_DIR = 'samples'
 
+    checkpoint_path = os.path.join(CHECKPOINT_DIR, run_name)
+
     def maketree(path):
         try:
             os.makedirs(path)
         except:
             pass
 
-    enc = encoder.get_encoder(model_name)
+    maketree(checkpoint_path)
+    if not model_load:
+        for file in ['hparams.json', 'encoder.json', 'vocab.bpe']:
+            shutil.copyfile(os.path.join('models', model_name, file),
+                            os.path.join(checkpoint_path, file))
+
+    enc = encoder.get_encoder(checkpoint_path)
     hparams = model.default_hparams()
-    with open(os.path.join('models', model_name, 'hparams.json')) as f:
+    with open(os.path.join(checkpoint_path, 'hparams.json')) as f:
         hparams.override_from_dict(json.load(f))
 
     if sample_length > hparams.n_ctx:
@@ -127,8 +136,7 @@ def finetune(sess,
                 loss, var_list=train_vars)
         summary_loss = tf.summary.scalar('loss', loss)
 
-    summary_log = tf.summary.FileWriter(
-        os.path.join(CHECKPOINT_DIR, run_name))
+    summary_log = tf.summary.FileWriter(checkpoint_path)
 
     saver = tf.train.Saver(
         var_list=train_vars,
@@ -136,8 +144,7 @@ def finetune(sess,
     sess.run(tf.global_variables_initializer())
 
     if restore_from == 'latest':
-        ckpt = tf.train.latest_checkpoint(
-            os.path.join(CHECKPOINT_DIR, run_name))
+        ckpt = tf.train.latest_checkpoint(checkpoint_path)
         if ckpt is None:
             # Get fresh GPT weights if new run.
             ckpt = tf.train.latest_checkpoint(
@@ -160,7 +167,7 @@ def finetune(sess,
     print('Training...')
 
     counter = 1
-    counter_path = os.path.join(CHECKPOINT_DIR, run_name, 'counter')
+    counter_path = os.path.join(checkpoint_path, 'counter')
     if os.path.exists(counter_path):
         # Load the step number if we're resuming a run
         # Add 1 so we don't immediately try to save again
@@ -168,14 +175,14 @@ def finetune(sess,
             counter = int(fp.read()) + 1
 
     def save():
-        maketree(os.path.join(CHECKPOINT_DIR, run_name))
+        maketree(checkpoint_path)
         print(
             'Saving',
-            os.path.join(CHECKPOINT_DIR, run_name,
+            os.path.join(checkpoint_path,
                          'model-{}').format(counter))
         saver.save(
             sess,
-            os.path.join(CHECKPOINT_DIR, run_name, 'model'),
+            os.path.join(checkpoint_path, 'model'),
             global_step=counter)
         with open(counter_path, 'w') as fp:
             fp.write(str(counter) + '\n')
@@ -230,16 +237,17 @@ def finetune(sess,
 
             summary_log.add_summary(v_summary, counter)
 
-            avg_loss = (avg_loss[0] * 0.99 + v_loss,
-                        avg_loss[1] * 0.99 + 1.0)
+            if counter % print_every == 0:
+                avg_loss = (avg_loss[0] * 0.99 + v_loss,
+                            avg_loss[1] * 0.99 + 1.0)
 
-            print(
-                '[{counter} | {time:2.2f}] loss={loss:2.2f} avg={avg:2.2f}'
-                .format(
-                    counter=counter,
-                    time=time.time() - start_time,
-                    loss=v_loss,
-                    avg=avg_loss[0] / avg_loss[1]))
+                print(
+                    '[{counter} | {time:2.2f}] loss={loss:2.2f} avg={avg:2.2f}'
+                    .format(
+                        counter=counter,
+                        time=time.time() - start_time,
+                        loss=v_loss,
+                        avg=avg_loss[0] / avg_loss[1]))
 
             counter += 1
     except KeyboardInterrupt:
@@ -248,12 +256,12 @@ def finetune(sess,
 
 
 def load_gpt2(sess,
-              checkpoint_path=os.path.join('models', '117M')):
+              run_name="run1"):
     """Loads the model checkpoint into a TensorFlow session
     for repeated predictions.
     """
 
-    finetune(sess, '', model_load=True)
+    finetune(sess, '', run_name=run_name, model_load=True)
 
 
 def generate(sess,
@@ -266,9 +274,10 @@ def generate(sess,
              seed=None,
              nsamples=1,
              batch_size=1,
-             length=1024,
+             length=1023,
              temperature=0.7,
-             top_k=0):
+             top_k=0,
+             run_name='run1'):
     """Generates text from a model loaded into memory.
 
     Adapted from https://github.com/openai/gpt-2/blob/master/src/interactive_conditional_samples.py
@@ -284,9 +293,14 @@ def generate(sess,
     if prefix:
         context = tf.placeholder(tf.int32, [batch_size, None])
 
-    enc = encoder.get_encoder(model_name)
+    CHECKPOINT_DIR = 'checkpoint'
+    SAMPLE_DIR = 'samples'
+
+    checkpoint_path = os.path.join(CHECKPOINT_DIR, run_name)
+
+    enc = encoder.get_encoder(checkpoint_path)
     hparams = model.default_hparams()
-    with open(os.path.join('models', model_name, 'hparams.json')) as f:
+    with open(os.path.join(checkpoint_path, 'hparams.json')) as f:
         hparams.override_from_dict(json.load(f))
 
     np.random.seed(seed)
@@ -345,9 +359,10 @@ def generate_to_file(sess,
                      seed=None,
                      nsamples=1,
                      batch_size=1,
-                     length=1024,
+                     length=1023,
                      temperature=0.7,
-                     top_k=0):
+                     top_k=0,
+                     run_name='run1'):
     """Generates the texts to a file.
 
     sample_delim separates texts: set to '' if each text is a small document.
@@ -367,7 +382,8 @@ def generate_to_file(sess,
              batch_size,
              length,
              temperature,
-             top_k)
+             top_k,
+             run_name)
 
 
 def mount_gdrive():
