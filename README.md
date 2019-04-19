@@ -10,9 +10,11 @@ This package incorporates and makes minimal low-level changes to:
 
 For finetuning, it is **strongly** recommended to use a GPU, although you can generate using a CPU (albeit much more slowly). If you are training in the cloud, using a Colaboratory notebook or a Google Compute Engine VM w/ the [TensorFlow Deep Learning](https://cloud.google.com/deep-learning-vm/) image is strongly recommended. (as the GPT-2 model is hosted on GCP)
 
+You can use gpt-2-simple to retrain a model using a GPU **for free** in [this Colaboratory notebook](https://colab.research.google.com/drive/1VLG8e7YSEwypxU-noRNhsv5dW4NfTGce), which also demos additional features of the package.
+
 ## Install
 
-gpt-2-simple can be installed via PyPi:
+gpt-2-simple can be installed [via PyPI](https://pypi.org/project/gpt_2_simple/):
 
 ```shell
 pip3 install gpt_2_simple
