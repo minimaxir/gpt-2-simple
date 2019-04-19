@@ -1,5 +1,7 @@
 # gpt-2-simple
 
+![gen_demo](docs/gen_demo.png)
+
 A simple Python package that wraps existing model fine-tuning and generation scripts for [OpenAI](https://openai.com)'s [GPT-2 text generation model](https://openai.com/blog/better-language-models/) (specifically the "small", 117M hyperparameter version). Additionally, this package allows easier generation of text, generating to a file for easy curation, allowing for prefixes to force the text to start with a given phrase.
 
 This package incorporates and makes minimal low-level changes to:
@@ -81,6 +83,10 @@ Note: this project is intended to have a very tight scope unless demand dictates
 * Allow users to use Colaboratory's TPU for finetuning. ([GitHub Issue](https://github.com/minimaxir/gpt-2-simple/issues/3))
 * Allow users to use multiple GPUs (e.g. Horovod)
 * For Colaboratory, allow model to automatically save checkpoints to Google Drive during training to prevent timeouts.
+
+## Examples Using gpt-2-simple
+
+* [ResetEra](https://www.resetera.com/threads/i-trained-an-ai-on-thousands-of-resetera-thread-conversations-and-it-created-hot-gaming-shitposts.112167/) — Generated video game forum discussions
 
 ## Maintainer/Creator
 
