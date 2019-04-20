@@ -424,3 +424,14 @@ def copy_file_from_gdrive(file_path):
     is_mounted()
 
     shutil.copyfile("/content/drive/My Drive/" + file_path, file_path)
+
+
+def is_gpt2_downloaded(model_path=os.path.join("models", "117M")):
+    """Checks if the original model + associated files are present in folder."""
+
+    for filename in ['checkpoint', 'encoder.json', 'hparams.json',
+                     'model.ckpt.data-00000-of-00001', 'model.ckpt.index',
+                     'model.ckpt.meta', 'vocab.bpe']:
+        if not os.path.isfile(os.path.join(model_path, filename)):
+            return False
+    return True
