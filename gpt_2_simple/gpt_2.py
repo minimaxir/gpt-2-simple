@@ -8,6 +8,7 @@ from tqdm import tqdm
 import numpy as np
 import tensorflow as tf
 import time
+import csv
 
 # if in Google Colaboratory
 try:
@@ -424,3 +425,30 @@ def copy_file_from_gdrive(file_path):
     is_mounted()
 
     shutil.copyfile("/content/drive/My Drive/" + file_path, file_path)
+
+
+def is_gpt2_downloaded(model_path=os.path.join("models", "117M")):
+    """Checks if the original model + associated files are present in folder."""
+
+    for filename in ['checkpoint', 'encoder.json', 'hparams.json',
+                     'model.ckpt.data-00000-of-00001', 'model.ckpt.index',
+                     'model.ckpt.meta', 'vocab.bpe']:
+        if not os.path.isfile(os.path.join(model_path, filename)):
+            return False
+    return True
+
+
+def encode_csv(csv_path, out_path='csv_encoded.txt', header=True,
+               start_token="<|startoftext|>",
+               end_token="<|endoftext|>"):
+    """Encodes a single-column CSV to a format suitable for gpt-2-simple.
+       Automatically adds the specified prefix and suffix tokens.
+    """
+
+    with open(csv_path, 'r', encoding='utf8', errors='ignore') as f:
+        with open(out_path, 'w', encoding='utf8', errors='ignore') as w:
+            if header:
+                f.readline()
+            reader = csv.reader(f)
+            for row in reader:
+                w.write(start_token + row[0] + end_token + "\n")
