@@ -526,6 +526,9 @@ def cmd():
     parser.add_argument(
         '--include_prefix',  help="[generate] Include prefix when truncating.",
         nargs='?', default=True, type=lambda x: (str(x).lower() == 'true'))
+    parser.add_argument(
+        '--sample_delim',  help="[generate] Delimiter between each generated sample.",
+        nargs='?', default='=' * 20 + '\n', type=str)
 
     # Positional arguments
     parser.add_argument('mode', nargs='?')
@@ -547,7 +550,8 @@ def cmd():
                      folder=args.folder, length=args.length,
                      temperature=args.temperature, batch_size=args.batch_size,
                      prefix=args.prefix, truncate=args.truncate,
-                     include_prefix=args.include_prefix)
+                     include_prefix=args.include_prefix,
+                     sample_delim=args.sample_delim)
 
 
 def cmd_finetune(dataset, run_name, steps, restore_from, sample_every,
@@ -566,7 +570,8 @@ def cmd_finetune(dataset, run_name, steps, restore_from, sample_every,
 
 def cmd_generate(nfiles, nsamples, folder,
                  length, temperature, batch_size,
-                 prefix, truncate, include_prefix):
+                 prefix, truncate, include_prefix,
+                 sample_delim):
     """Wrapper script for generating text via the CLI.
     The files are generated into a folder, which can be downloaded
     recursively by downloading the entire folder.
@@ -593,5 +598,6 @@ def cmd_generate(nfiles, nsamples, folder,
                          batch_size=batch_size,
                          prefix=prefix,
                          truncate=truncate,
-                         include_prefix=include_prefix
+                         include_prefix=include_prefix,
+                         sample_delim=sample_delim
                         )
