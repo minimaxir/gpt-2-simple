@@ -61,7 +61,7 @@ print(single_text)
 
 You can pass a `run_name` parameter to `finetune` and `load_gpt2` if you want to store/load multiple models in a `checkpoint` folder.
 
-There is also a command-line interface for both finetining and generation with strong default for just running on a Cloud VM w/ GPU. For finetuning (which will also download the model if not present):
+There is also a command-line interface for both finetining and generation with strong defaults for just running on a Cloud VM w/ GPU. For finetuning (which will also download the model if not present):
 
 ```shell
 gpt_2_simple finetune shakespeare.txt
@@ -94,7 +94,7 @@ The method GPT-2 uses to generate text is slightly different than those like oth
 * Higher temperatures work better (e.g. 0.7 - 1.0) to generate more interesting text, while other frameworks work better between 0.2 - 0.5.
 * When finetuning GPT-2, it has no sense of the beginning or end of a document within a larger text. You'll need to use a bespoke character sequence to indicate the beginning and end of a document. Then while generating, you can specify a `prefix` targeting the beginning token sequences, and a `truncate` targeting the end token sequence. You can also set `include_prefix=False` to discard the prefix token while generating (e.g. if it's something unwanted like `<|startoftext|>`).
 * GPT-2 allows you to generate texts in parallel by setting a `batch_size` that is divisible into `nsamples`, resulting in much faster generation. Works very well with a GPU (can set `batch_size` up to 20 on Colaboratory's K80)!
-* Due to GPT-2's architecture, it scales up nicely with more powerful GPUs. If you want to train for longer periods of time, GCP's P100 GPU is about 3x faster than a K80 for only 3x the price, making it compariable (the V100 is about 1.5x faster than the P100 but about 2x the price). The P100 uses 100% of the GPU even with `batch_size=1`, and about 88% of the V100 GPU.
+* Due to GPT-2's architecture, it scales up nicely with more powerful GPUs. If you want to train for longer periods of time, GCP's P100 GPU is about 3x faster than a K80 for only 3x the price, making it price-comparable (the V100 is about 1.5x faster than the P100 but about 2x the price). The P100 uses 100% of the GPU even with `batch_size=1`, and about 88% of the V100 GPU.
 
 ## Planned Work
 
