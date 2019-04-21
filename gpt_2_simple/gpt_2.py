@@ -280,7 +280,8 @@ def generate(sess,
              length=1023,
              temperature=0.7,
              top_k=0,
-             run_name='run1'):
+             run_name='run1',
+             include_prefix=True):
     """Generates text from a model loaded into memory.
 
     Adapted from https://github.com/openai/gpt-2/blob/master/src/interactive_conditional_samples.py
@@ -336,8 +337,15 @@ def generate(sess,
             if prefix:
                 gen_text = prefix[0] + gen_text
             if truncate:
-                trunc_text = re.search(r'(.*?)(?:{})'.format(truncate),
-                                       gen_text, re.S)
+                truncate_esc = re.escape(truncate)
+                if prefix and not include_prefix:
+                    prefix_esc = re.escape(prefix)
+                    pattern = '(?:{})(.*?)(?:{})'.format(prefix_esc,
+                                                         truncate_esc)
+                else:
+                    pattern = '(.*?)(?:{})'.format(truncate_esc)
+
+                trunc_text = re.search(pattern, gen_text, re.S)
                 if trunc_text:
                     gen_text = trunc_text.group(1)
             if destination_path:
@@ -365,7 +373,8 @@ def generate_to_file(sess,
                      length=1023,
                      temperature=0.7,
                      top_k=0,
-                     run_name='run1'):
+                     run_name='run1',
+                     include_prefix=True):
     """Generates the texts to a file.
 
     sample_delim separates texts: set to '' if each text is a small document.
@@ -386,7 +395,8 @@ def generate_to_file(sess,
              length,
              temperature,
              top_k,
-             run_name)
+             run_name,
+             include_prefix)
 
 
 def mount_gdrive():
@@ -477,47 +487,49 @@ def cmd():
         '--steps',  help="[finetune] Number of steps to train (-1 for infinite)",
         nargs='?', default=-1)
     parser.add_argument(
-        '--steps',  help="[finetune] Whether to load model 'fresh' or from 'latest' checkpoint.",
+        '--restore_from',  help="[finetune] Whether to load model 'fresh' or from 'latest' checkpoint.",
         nargs='?', default='latest')
     parser.add_argument(
         '--sample_every',  help="[finetune] After how many steps to print sample",
-        nargs='?', default=1000000)
+        nargs='?', default=1000000, type=int)
     parser.add_argument(
         '--save_every',  help="[finetune] After how many steps to save checkpoint",
-        nargs='?', default=100)
+        nargs='?', default=100, type=int)
     parser.add_argument(
         '--print_every',  help="[finetune] After how many steps to print progress",
-        nargs='?', default=10)
+        nargs='?', default=10, type=int)
     parser.add_argument(
         '--nfiles',  help="[generate] How many files to generate.",
-        nargs='?', default=1)
-    parser.add_argument(
-        '--nfiles',  help="[generate] How many files to generate.",
-        nargs='?', default=1)
+        nargs='?', default=1, type=int)
     parser.add_argument(
         '--nsamples',  help="[generate] How many texts to generate.",
-        nargs='?', default=1)
+        nargs='?', default=1, type=int)
     parser.add_argument(
-        '--nsamples',  help="[generate] Folder to save the generated files",
-        nargs='?', default="gen")
+        '--folder',  help="[generate] Folder to save the generated files",
+        nargs='?', default="gen", type=str)
     parser.add_argument(
         '--length',  help="[generate] Length (tokens) of the generated texts",
-        nargs='?', default=1023)
+        nargs='?', default=1023, type=int)
     parser.add_argument(
         '--temperature',  help="[generate] Temperature of the generated texts",
-        nargs='?', default=0.7)
+        nargs='?', default=0.7, type=float)
     parser.add_argument(
         '--batch_size',  help="[generate] Batch size for generation (increase for GPUs)",
-        nargs='?', default=1)
+        nargs='?', default=1, type=int)
     parser.add_argument(
         '--prefix',  help="[generate] Prefix for generated texts",
         nargs='?', default=None)
     parser.add_argument(
         '--truncate',  help="[generate] Truncation for generated texts",
         nargs='?', default=None)
+    # https://stackoverflow.com/a/46951029
+    parser.add_argument(
+        '--include_prefix',  help="[generate] Include prefix when truncating.",
+        nargs='?', default=True, type=lambda x: (str(x).lower() == 'true'))
 
     # Positional arguments
     parser.add_argument('mode', nargs='?')
+    parser.add_argument('dataset', nargs='?')
 
     args = parser.parse_args()
     assert args.mode in ['finetune', 'generate'], "Mode must be 'finetune' or 'generate'"
@@ -534,7 +546,8 @@ def cmd():
         cmd_generate(nfiles=args.nfiles, nsamples=args.nsamples,
                      folder=args.folder, length=args.length,
                      temperature=args.temperature, batch_size=args.batch_size,
-                     prefix=args.prefix, truncate=args.truncate)
+                     prefix=args.prefix, truncate=args.truncate,
+                     include_prefix=args.include_prefix)
 
 
 def cmd_finetune(dataset, run_name, steps, restore_from, sample_every,
@@ -553,7 +566,7 @@ def cmd_finetune(dataset, run_name, steps, restore_from, sample_every,
 
 def cmd_generate(nfiles, nsamples, folder,
                  length, temperature, batch_size,
-                 prefix, truncate):
+                 prefix, truncate, include_prefix):
     """Wrapper script for generating text via the CLI.
     The files are generated into a folder, which can be downloaded
     recursively by downloading the entire folder.
@@ -580,4 +593,5 @@ def cmd_generate(nfiles, nsamples, folder,
                          batch_size=batch_size,
                          prefix=prefix,
                          truncate=truncate,
+                         include_prefix=include_prefix
                         )
