@@ -4,11 +4,13 @@ import requests
 import sys
 import shutil
 import re
-from tqdm import tqdm
+from tqdm import tqdm, trange
 import numpy as np
 import tensorflow as tf
 import time
+from datetime import datetime
 import csv
+import argparse
 
 # if in Google Colaboratory
 try:
@@ -452,3 +454,130 @@ def encode_csv(csv_path, out_path='csv_encoded.txt', header=True,
             reader = csv.reader(f)
             for row in reader:
                 w.write(start_token + row[0] + end_token + "\n")
+
+
+def cmd():
+    """Function called when invoking from the terminal."""
+
+    parser = argparse.ArgumentParser(
+        description="Easily retrain OpenAI's GPT-2 text-generating model on new texts. (https://github.com/minimaxir/gpt-2-simple)"
+    )
+
+    # Explicit arguments
+    
+    parser.add_argument(
+        '--mode', help='Mode for using the CLI (either "finetune" or "generate") [Required]', nargs='?')
+    parser.add_argument(
+        '--run_name',  help="[finetune/generate] Run number to save/load the model",
+        nargs='?', default='run1')
+    parser.add_argument(
+        '--dataset',  help="[finetune] Path to the source text.",
+        nargs='?', default=None)
+    parser.add_argument(
+        '--steps',  help="[finetune] Number of steps to train (-1 for infinite)",
+        nargs='?', default=-1)
+    parser.add_argument(
+        '--steps',  help="[finetune] Whether to load model 'fresh' or from 'latest' checkpoint.",
+        nargs='?', default='latest')
+    parser.add_argument(
+        '--sample_every',  help="[finetune] After how many steps to print sample",
+        nargs='?', default=1000000)
+    parser.add_argument(
+        '--save_every',  help="[finetune] After how many steps to save checkpoint",
+        nargs='?', default=100)
+    parser.add_argument(
+        '--print_every',  help="[finetune] After how many steps to print progress",
+        nargs='?', default=10)
+    parser.add_argument(
+        '--nfiles',  help="[generate] How many files to generate.",
+        nargs='?', default=1)
+    parser.add_argument(
+        '--nfiles',  help="[generate] How many files to generate.",
+        nargs='?', default=1)
+    parser.add_argument(
+        '--nsamples',  help="[generate] How many texts to generate.",
+        nargs='?', default=1)
+    parser.add_argument(
+        '--nsamples',  help="[generate] Folder to save the generated files",
+        nargs='?', default="gen")
+    parser.add_argument(
+        '--length',  help="[generate] Length (tokens) of the generated texts",
+        nargs='?', default=1023)
+    parser.add_argument(
+        '--temperature',  help="[generate] Temperature of the generated texts",
+        nargs='?', default=0.7)
+    parser.add_argument(
+        '--batch_size',  help="[generate] Batch size for generation (increase for GPUs)",
+        nargs='?', default=1)
+    parser.add_argument(
+        '--prefix',  help="[generate] Prefix for generated texts",
+        nargs='?', default=None)
+    parser.add_argument(
+        '--truncate',  help="[generate] Truncation for generated texts",
+        nargs='?', default=None)
+
+    # Positional arguments
+    parser.add_argument('mode', nargs='?')
+
+    args = parser.parse_args()
+    assert args.mode in ['finetune', 'generate'], "Mode must be 'finetune' or 'generate'"
+
+    if args.mode == 'finetune':
+        assert args.dataset is not None, "You need to provide a dataset."
+
+        cmd_finetune(dataset=args.dataset, run_name=args.run_name,
+                     steps=args.steps, restore_from=args.restore_from,
+                     sample_every=args.sample_every,
+                     save_every=args.save_every,
+                     print_every=args.print_every)
+    if args.mode == "generate":
+        cmd_generate(nfiles=args.nfiles, nsamples=args.nsamples,
+                     folder=args.folder, length=args.length,
+                     temperature=args.temperature, batch_size=args.batch_size,
+                     prefix=args.prefix, truncate=args.truncate)
+
+
+def cmd_finetune(dataset, run_name, steps, restore_from, sample_every,
+                 save_every, print_every):
+    """Wrapper script for finetuning the model via the CLI."""
+
+    if not is_gpt2_downloaded():
+        download_gpt2()
+
+    sess = start_tf_sess()
+    finetune(sess, dataset=dataset, run_name=run_name,
+             steps=steps, restore_from=restore_from,
+             sample_every=sample_every, save_every=save_every,
+             print_every=print_every)
+
+
+def cmd_generate(nfiles, nsamples, folder,
+                 length, temperature, batch_size,
+                 prefix, truncate):
+    """Wrapper script for generating text via the CLI.
+    The files are generated into a folder, which can be downloaded
+    recursively by downloading the entire folder.
+    """
+
+    sess = start_tf_sess()
+    load_gpt2(sess)
+
+    try:
+        os.mkdir(folder)
+    except:
+        shutil.rmtree(folder)
+        os.mkdir(folder)
+
+    for _ in trange(nfiles):
+        gen_file = os.path.join(folder,
+                    'gpt2_gentext_{:%Y%m%d_%H%M%S}.txt'.format(datetime.utcnow()))
+
+        generate_to_file(sess,
+                         destination_path=gen_file,
+                         length=length,
+                         temperature=temperature,
+                         nsamples=nsamples,
+                         batch_size=batch_size,
+                         prefix=prefix,
+                         truncate=truncate,
+                        )
