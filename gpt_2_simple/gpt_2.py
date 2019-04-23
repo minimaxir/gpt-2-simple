@@ -171,24 +171,25 @@ def finetune(sess,
 
     counter = 1
     counter_path = os.path.join(checkpoint_path, 'counter')
-    if os.path.exists(counter_path):
+    if os.path.exists(counter_path) and restore_from == 'latest':
         # Load the step number if we're resuming a run
         # Add 1 so we don't immediately try to save again
         with open(counter_path, 'r') as fp:
             counter = int(fp.read()) + 1
+    counter_base = counter
 
     def save():
         maketree(checkpoint_path)
         print(
             'Saving',
             os.path.join(checkpoint_path,
-                         'model-{}').format(counter))
+                         'model-{}').format(counter-1))
         saver.save(
             sess,
             os.path.join(checkpoint_path, 'model'),
-            global_step=counter)
+            global_step=counter-1)
         with open(counter_path, 'w') as fp:
-            fp.write(str(counter) + '\n')
+            fp.write(str(counter-1) + '\n')
 
     def generate_samples():
         context_tokens = data_sampler.sample(1)
@@ -219,7 +220,7 @@ def finetune(sess,
 
     try:
         while True:
-            if counter == steps:
+            if steps > 0 and counter == (counter_base + steps):
                 save()
                 return
             if counter % save_every == 0:
