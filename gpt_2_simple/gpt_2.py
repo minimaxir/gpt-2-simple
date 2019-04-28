@@ -552,7 +552,7 @@ def cmd():
                      temperature=args.temperature, batch_size=args.batch_size,
                      prefix=args.prefix, truncate=args.truncate,
                      include_prefix=args.include_prefix,
-                     sample_delim=args.sample_delim)
+                     sample_delim=args.sample_delim, run_name=args.run_name)
 
 
 def cmd_finetune(dataset, run_name, steps, restore_from, sample_every,
@@ -572,14 +572,14 @@ def cmd_finetune(dataset, run_name, steps, restore_from, sample_every,
 def cmd_generate(nfiles, nsamples, folder,
                  length, temperature, batch_size,
                  prefix, truncate, include_prefix,
-                 sample_delim):
+                 sample_delim, run_name):
     """Wrapper script for generating text via the CLI.
     The files are generated into a folder, which can be downloaded
     recursively by downloading the entire folder.
     """
 
     sess = start_tf_sess()
-    load_gpt2(sess)
+    load_gpt2(sess, run_name=run_name)
 
     try:
         os.mkdir(folder)
@@ -600,5 +600,6 @@ def cmd_generate(nfiles, nsamples, folder,
                          prefix=prefix,
                          truncate=truncate,
                          include_prefix=include_prefix,
-                         sample_delim=sample_delim
+                         sample_delim=sample_delim,
+                         run_name=run_name
                         )
