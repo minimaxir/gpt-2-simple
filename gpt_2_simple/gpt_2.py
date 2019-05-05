@@ -115,6 +115,7 @@ def finetune(sess,
     if model_name != '117M':
         use_memory_saving_gradients = True
         only_train_transformer_layers = True
+        learning_rate /= 10
 
     context = tf.placeholder(tf.int32, [batch_size, None])
     output = model.model(hparams=hparams, X=context)
@@ -453,13 +454,13 @@ def copy_file_from_gdrive(file_path):
     shutil.copyfile("/content/drive/My Drive/" + file_path, file_path)
 
 
-def is_gpt2_downloaded(model_path=os.path.join("models", "117M")):
+def is_gpt2_downloaded(model_name='117M'):
     """Checks if the original model + associated files are present in folder."""
 
     for filename in ['checkpoint', 'encoder.json', 'hparams.json',
                      'model.ckpt.data-00000-of-00001', 'model.ckpt.index',
                      'model.ckpt.meta', 'vocab.bpe']:
-        if not os.path.isfile(os.path.join(model_path, filename)):
+        if not os.path.isfile(os.path.join("models", model_name, filename)):
             return False
     return True
 
@@ -494,6 +495,9 @@ def cmd():
     parser.add_argument(
         '--run_name',  help="[finetune/generate] Run number to save/load the model",
         nargs='?', default='run1')
+    parser.add_argument(
+        '--model_name',  help="[finetune] Name of the GPT-2 model to finetune",
+        nargs='?', default='117M')
     parser.add_argument(
         '--dataset',  help="[finetune] Path to the source text.",
         nargs='?', default=None)
@@ -555,6 +559,7 @@ def cmd():
         assert args.dataset is not None, "You need to provide a dataset."
 
         cmd_finetune(dataset=args.dataset, run_name=args.run_name,
+                     model_name=args.model_name,
                      steps=args.steps, restore_from=args.restore_from,
                      sample_every=args.sample_every,
                      save_every=args.save_every,
@@ -568,15 +573,17 @@ def cmd():
                      sample_delim=args.sample_delim, run_name=args.run_name)
 
 
-def cmd_finetune(dataset, run_name, steps, restore_from, sample_every,
+def cmd_finetune(dataset, run_name, model_name, steps,
+                 restore_from, sample_every,
                  save_every, print_every):
     """Wrapper script for finetuning the model via the CLI."""
 
-    if not is_gpt2_downloaded():
-        download_gpt2()
+    if not is_gpt2_downloaded(model_name=model_name):
+        download_gpt2(model_name=model_name)
 
     sess = start_tf_sess()
     finetune(sess, dataset=dataset, run_name=run_name,
+             model_name=model_name,
              steps=steps, restore_from=restore_from,
              sample_every=sample_every, save_every=save_every,
              print_every=print_every)
@@ -615,4 +622,4 @@ def cmd_generate(nfiles, nsamples, folder,
                          include_prefix=include_prefix,
                          sample_delim=sample_delim,
                          run_name=run_name
-                        )
+                         )
