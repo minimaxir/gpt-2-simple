@@ -115,7 +115,6 @@ def finetune(sess,
     if model_name != '117M':
         use_memory_saving_gradients = True
         only_train_transformer_layers = True
-        learning_rate /= 10
 
     context = tf.placeholder(tf.int32, [batch_size, None])
     output = model.model(hparams=hparams, X=context)
@@ -144,7 +143,7 @@ def finetune(sess,
         opt_apply = opt.apply_gradients()
         summary_loss = tf.summary.scalar('loss', opt_apply)
     else:
-        opt = tf.train.AdamOptimizer(learning_rate=args.learning_rate)
+        opt = tf.train.AdamOptimizer(learning_rate=learning_rate)
         if use_memory_saving_gradients:
             opt_grads = memory_saving_gradients.gradients(loss, train_vars)
         else:
@@ -237,9 +236,9 @@ def finetune(sess,
             if steps > 0 and counter == (counter_base + steps):
                 save()
                 return
-            if counter % save_every == 0:
+            if (counter - 1) % save_every == 0 and counter > 1:
                 save()
-            if counter % sample_every == 0:
+            if (counter - 1) % sample_every == 0 and counter > 1:
                 generate_samples()
 
             if accumulate_gradients > 1:

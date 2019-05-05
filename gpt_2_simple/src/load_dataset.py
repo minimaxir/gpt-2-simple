@@ -29,11 +29,11 @@ def load_dataset(enc, path, combine):
             with np.load(path) as npz:
                 for item in npz.files:
                     token_chunks.append(npz[item])
-        else if path.endswith('.csv'):
+        elif path.endswith('.csv'):
             start_token = "<|startoftext|>"
             end_token = "<|endoftext|>"
             with open(path, 'r', encoding='utf8', errors='ignore') as fp:
-                f.readline()   # skip header
+                fp.readline()   # skip header
                 reader = csv.reader(fp)
                 for row in reader:
                     raw_text += start_token + row[0] + end_token + "\n"
