@@ -53,13 +53,17 @@ def download_gpt2(model_name='117M'):
                     pbar.update(chunk_size)
 
 
-def start_tf_sess():
+def start_tf_sess(threads=-1):
     """
     Returns a tf.Session w/ config
     """
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
     config.graph_options.rewrite_options.layout_optimizer = rewriter_config_pb2.RewriterConfig.OFF
+    if threads > 0:
+        config.intra_op_parallelism_threads = threads
+        config.inter_op_parallelism_threads = threads
+
     return tf.Session(config=config)
 
 
@@ -281,7 +285,23 @@ def load_gpt2(sess,
     for repeated predictions.
     """
 
-    finetune(sess, '', run_name=run_name, model_load=True)
+    CHECKPOINT_DIR = 'checkpoint'
+
+    checkpoint_path = os.path.join(CHECKPOINT_DIR, run_name)
+
+    hparams = model.default_hparams()
+    with open(os.path.join(checkpoint_path, 'hparams.json')) as f:
+        hparams.override_from_dict(json.load(f))
+
+    context = tf.placeholder(tf.int32, [1, None])
+    output = model.model(hparams=hparams, X=context)
+
+    ckpt = tf.train.latest_checkpoint(checkpoint_path)
+    saver = tf.train.Saver(allow_empty=True)
+    sess.run(tf.global_variables_initializer())
+
+    print('Loading checkpoint', ckpt)
+    saver.restore(sess, ckpt)
 
 
 def generate(sess,
