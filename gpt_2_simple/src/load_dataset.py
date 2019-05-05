@@ -37,8 +37,8 @@ def load_dataset(enc, path, combine):
                 reader = csv.reader(fp)
                 for row in reader:
                     raw_text += start_token + row[0] + end_token + "\n"
-                tokens = np.stack(enc.encode(raw_text))
-                token_chunks.append(tokens)
+            tokens = np.stack(enc.encode(raw_text))
+            token_chunks.append(tokens)
         else:
             # Plain text
             with open(path, 'r', encoding='utf8', errors='ignore') as fp:

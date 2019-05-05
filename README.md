@@ -2,7 +2,7 @@
 
 ![gen_demo](docs/gen_demo.png)
 
-A simple Python package that wraps existing model fine-tuning and generation scripts for [OpenAI](https://openai.com)'s [GPT-2 text generation model](https://openai.com/blog/better-language-models/) (specifically the "small", 117M hyperparameter version). Additionally, this package allows easier generation of text, generating to a file for easy curation, allowing for prefixes to force the text to start with a given phrase.
+A simple Python package that wraps existing model fine-tuning and generation scripts for [OpenAI](https://openai.com)'s [GPT-2 text generation model](https://openai.com/blog/better-language-models/) (specifically the "small" 117M and "medium" 345M hyperparameter versions). Additionally, this package allows easier generation of text, generating to a file for easy curation, allowing for prefixes to force the text to start with a given phrase.
 
 This package incorporates and makes minimal low-level changes to:
 
@@ -28,12 +28,12 @@ You will also need to install the corresponding TensorFlow for your system (e.g.
 
 An example for downloading the model to the local system, fineturning it on a dataset. and generating some text.
 
-Warning: the pretrained model, and thus any finetuned model, is 500 MB!
+Warning: the pretrained 117M model, and thus any finetuned model, is 500 MB! (the pretrained 345M model is 1.5 GB)
 
 ```python
 import gpt_2_simple as gpt2
 
-gpt2.download_gpt2()   # model is saved into current directory under /models/117M/
+gpt2.download_gpt2(model_name="117M")   # model is saved into current directory under /models/117M/
 
 sess = gpt2.start_tf_sess()
 gpt2.finetune(sess, 'shakespeare.txt', steps=1000)   # steps is max number of training steps
@@ -88,13 +88,13 @@ NB: *Restart the Python session first* if you want to finetune on another datase
 The method GPT-2 uses to generate text is slightly different than those like other packages like textgenrnn (specifically, generating the full text sequence purely in the GPU and decoding it later), which cannot easily be fixed without hacking the underlying model code. As a result:
 
 * In general, GPT-2 is better at maintaining context over its entire generation length, making it good for generating conversational text. The text is also generally gramatically correct, with proper capitalization and few typoes.
-* The original GPT-2 model was trained on a *very* large variety of sources, allowing the model to incorporate trends not seen in the input text.
+* The original GPT-2 model was trained on a *very* large variety of sources, allowing the model to incorporate idioms not seen in the input text.
 * GPT-2 can only generate a maximum of 1024 tokens per request (about 3-4 paragraphs of English text).
 * GPT-2 cannot stop early upon reaching a specific end token. (workaround: pass the `truncate` parameter to a `generate` function to only collect text until a specified end token. You may want to reduce `length` appropriately.)
 * Higher temperatures work better (e.g. 0.7 - 1.0) to generate more interesting text, while other frameworks work better between 0.2 - 0.5.
 * When finetuning GPT-2, it has no sense of the beginning or end of a document within a larger text. You'll need to use a bespoke character sequence to indicate the beginning and end of a document. Then while generating, you can specify a `prefix` targeting the beginning token sequences, and a `truncate` targeting the end token sequence. You can also set `include_prefix=False` to discard the prefix token while generating (e.g. if it's something unwanted like `<|startoftext|>`).
 * GPT-2 allows you to generate texts in parallel by setting a `batch_size` that is divisible into `nsamples`, resulting in much faster generation. Works very well with a GPU (can set `batch_size` up to 20 on Colaboratory's K80)!
-* Due to GPT-2's architecture, it scales up nicely with more powerful GPUs. If you want to train for longer periods of time, GCP's P100 GPU is about 3x faster than a K80 for only 3x the price, making it price-comparable (the V100 is about 1.5x faster than the P100 but about 2x the price). The P100 uses 100% of the GPU even with `batch_size=1`, and about 88% of the V100 GPU.
+* Due to GPT-2's architecture, it scales up nicely with more powerful GPUs. For the 117M model, if you want to train for longer periods of time, GCP's P100 GPU is about 3x faster than a K80/T4 for only 3x the price, making it price-comparable (the V100 is about 1.5x faster than the P100 but about 2x the price). The P100 uses 100% of the GPU even with `batch_size=1`, and about 88% of the V100 GPU.
 
 ## Planned Work
 
