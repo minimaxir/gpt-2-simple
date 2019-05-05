@@ -70,7 +70,7 @@ def finetune(sess,
              combine=50000,
              batch_size=1,
              learning_rate=0.0001,
-             accumulate_gradients=1,
+             accumulate_gradients=5,
              restore_from='latest',
              run_name='run1',
              sample_every=100,
@@ -117,6 +117,7 @@ def finetune(sess,
     if model_name != '117M':
         use_memory_saving_gradients = True
         only_train_transformer_layers = True
+        accumulate_gradients = 1
 
     context = tf.placeholder(tf.int32, [batch_size, None])
     output = model.model(hparams=hparams, X=context)
