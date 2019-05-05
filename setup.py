@@ -47,7 +47,7 @@ NB: *Restart the Python session first* if you want to finetune on another datase
 setup(
     name='gpt_2_simple',
     packages=['gpt_2_simple'],  # this must be the same as the name above
-    version='0.3.2',
+    version='0.4',
     description="Python package to easily retrain OpenAI's GPT-2 " \
     "text-generating model on new texts.",
     long_description=long_description,
@@ -63,5 +63,5 @@ setup(
     },
     python_requires='>=3.5',
     include_package_data=True,
-    install_requires=['regex', 'requests', 'tqdm', 'numpy']
+    install_requires=['regex', 'requests', 'tqdm', 'numpy', 'toposort']
 )

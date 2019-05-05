@@ -7,6 +7,7 @@ import re
 from tqdm import tqdm, trange
 import numpy as np
 import tensorflow as tf
+from tensorflow.core.protobuf import rewriter_config_pb2
 import time
 from datetime import datetime
 import csv
@@ -18,7 +19,7 @@ try:
 except:
     pass
 
-from gpt_2_simple.src import model, sample, encoder
+from gpt_2_simple.src import model, sample, encoder, memory_saving_gradients
 from gpt_2_simple.src.load_dataset import load_dataset, Sampler
 from gpt_2_simple.src.accumulate import AccumulatingOptimizer
 
@@ -58,6 +59,7 @@ def start_tf_sess():
     """
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
+    config.graph_options.rewrite_options.layout_optimizer = rewriter_config_pb2.RewriterConfig.OFF
     return tf.Session(config=config)
 
 
@@ -77,6 +79,8 @@ def finetune(sess,
              save_every=1000,
              print_every=1,
              max_checkpoints=1,
+             use_memory_saving_gradients=False,
+             only_train_transformer_layers=False,
              model_load=False):
     """Finetunes the model on the given dataset.
 
@@ -110,6 +114,11 @@ def finetune(sess,
         raise ValueError(
             "Can't get samples longer than window size: %s" % hparams.n_ctx)
 
+    if model_name != '117M':
+        use_memory_saving_gradients = True
+        only_train_transformer_layers = True
+        accumulate_gradients = 1
+
     context = tf.placeholder(tf.int32, [batch_size, None])
     output = model.model(hparams=hparams, X=context)
     loss = tf.reduce_mean(
@@ -124,8 +133,11 @@ def finetune(sess,
         temperature=1.0,
         top_k=40)
 
-    train_vars = [v for v in tf.trainable_variables() if 'model' in v.name]
+    all_vars = [v for v in tf.trainable_variables() if 'model' in v.name]
+    train_vars = [v for v in all_vars if '/h' in v.name] if only_train_transformer_layers else all_vars
     if accumulate_gradients > 1:
+        if use_memory_saving_gradients:
+            exit("Memory saving gradients are not implemented for gradient accumulation yet.")
         opt = AccumulatingOptimizer(
             opt=tf.train.AdamOptimizer(learning_rate=learning_rate),
             var_list=train_vars)
@@ -134,15 +146,19 @@ def finetune(sess,
         opt_apply = opt.apply_gradients()
         summary_loss = tf.summary.scalar('loss', opt_apply)
     else:
-        opt_apply = tf.train.AdamOptimizer(
-            learning_rate=learning_rate).minimize(
-                loss, var_list=train_vars)
+        opt = tf.train.AdamOptimizer(learning_rate=learning_rate)
+        if use_memory_saving_gradients:
+            opt_grads = memory_saving_gradients.gradients(loss, train_vars)
+        else:
+            opt_grads = tf.gradients(loss, train_vars)
+        opt_grads = list(zip(opt_grads, train_vars))
+        opt_apply = opt.apply_gradients(opt_grads)
         summary_loss = tf.summary.scalar('loss', loss)
 
     summary_log = tf.summary.FileWriter(checkpoint_path)
 
     saver = tf.train.Saver(
-        var_list=train_vars,
+        var_list=all_vars,
         max_to_keep=max_checkpoints)
     sess.run(tf.global_variables_initializer())
 
@@ -223,9 +239,9 @@ def finetune(sess,
             if steps > 0 and counter == (counter_base + steps):
                 save()
                 return
-            if counter % save_every == 0:
+            if (counter - 1) % save_every == 0 and counter > 1:
                 save()
-            if counter % sample_every == 0:
+            if (counter - 1) % sample_every == 0 and counter > 1:
                 generate_samples()
 
             if accumulate_gradients > 1:
@@ -440,13 +456,13 @@ def copy_file_from_gdrive(file_path):
     shutil.copyfile("/content/drive/My Drive/" + file_path, file_path)
 
 
-def is_gpt2_downloaded(model_path=os.path.join("models", "117M")):
+def is_gpt2_downloaded(model_name='117M'):
     """Checks if the original model + associated files are present in folder."""
 
     for filename in ['checkpoint', 'encoder.json', 'hparams.json',
                      'model.ckpt.data-00000-of-00001', 'model.ckpt.index',
                      'model.ckpt.meta', 'vocab.bpe']:
-        if not os.path.isfile(os.path.join(model_path, filename)):
+        if not os.path.isfile(os.path.join("models", model_name, filename)):
             return False
     return True
 
@@ -481,6 +497,9 @@ def cmd():
     parser.add_argument(
         '--run_name',  help="[finetune/generate] Run number to save/load the model",
         nargs='?', default='run1')
+    parser.add_argument(
+        '--model_name',  help="[finetune] Name of the GPT-2 model to finetune",
+        nargs='?', default='117M')
     parser.add_argument(
         '--dataset',  help="[finetune] Path to the source text.",
         nargs='?', default=None)
@@ -542,6 +561,7 @@ def cmd():
         assert args.dataset is not None, "You need to provide a dataset."
 
         cmd_finetune(dataset=args.dataset, run_name=args.run_name,
+                     model_name=args.model_name,
                      steps=args.steps, restore_from=args.restore_from,
                      sample_every=args.sample_every,
                      save_every=args.save_every,
@@ -555,15 +575,17 @@ def cmd():
                      sample_delim=args.sample_delim, run_name=args.run_name)
 
 
-def cmd_finetune(dataset, run_name, steps, restore_from, sample_every,
+def cmd_finetune(dataset, run_name, model_name, steps,
+                 restore_from, sample_every,
                  save_every, print_every):
     """Wrapper script for finetuning the model via the CLI."""
 
-    if not is_gpt2_downloaded():
-        download_gpt2()
+    if not is_gpt2_downloaded(model_name=model_name):
+        download_gpt2(model_name=model_name)
 
     sess = start_tf_sess()
     finetune(sess, dataset=dataset, run_name=run_name,
+             model_name=model_name,
              steps=steps, restore_from=restore_from,
              sample_every=sample_every, save_every=save_every,
              print_every=print_every)
@@ -602,4 +624,4 @@ def cmd_generate(nfiles, nsamples, folder,
                          include_prefix=include_prefix,
                          sample_delim=sample_delim,
                          run_name=run_name
-                        )
+                         )
