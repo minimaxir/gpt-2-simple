@@ -7,6 +7,7 @@ import re
 from tqdm import tqdm, trange
 import numpy as np
 import tensorflow as tf
+from tensorflow.core.protobuf import rewriter_config_pb2
 import time
 from datetime import datetime
 import csv
@@ -18,7 +19,7 @@ try:
 except:
     pass
 
-from gpt_2_simple.src import model, sample, encoder
+from gpt_2_simple.src import model, sample, encoder, memory_saving_gradients
 from gpt_2_simple.src.load_dataset import load_dataset, Sampler
 from gpt_2_simple.src.accumulate import AccumulatingOptimizer
 
@@ -58,6 +59,7 @@ def start_tf_sess():
     """
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
+    config.graph_options.rewrite_options.layout_optimizer = rewriter_config_pb2.RewriterConfig.OFF
     return tf.Session(config=config)
 
 
@@ -68,7 +70,7 @@ def finetune(sess,
              combine=50000,
              batch_size=1,
              learning_rate=0.0001,
-             accumulate_gradients=5,
+             accumulate_gradients=1,
              restore_from='latest',
              run_name='run1',
              sample_every=100,
@@ -110,6 +112,10 @@ def finetune(sess,
         raise ValueError(
             "Can't get samples longer than window size: %s" % hparams.n_ctx)
 
+    if model_name != '117M':
+        use_memory_saving_gradients = True
+        only_train_transformer_layers = True
+
     context = tf.placeholder(tf.int32, [batch_size, None])
     output = model.model(hparams=hparams, X=context)
     loss = tf.reduce_mean(
@@ -124,8 +130,11 @@ def finetune(sess,
         temperature=1.0,
         top_k=40)
 
-    train_vars = [v for v in tf.trainable_variables() if 'model' in v.name]
+    all_vars = [v for v in tf.trainable_variables() if 'model' in v.name]
+    train_vars = [v for v in all_vars if '/h' in v.name] if only_train_transformer_layers else all_vars
     if accumulate_gradients > 1:
+        if use_memory_saving_gradients:
+            exit("Memory saving gradients are not implemented for gradient accumulation yet.")
         opt = AccumulatingOptimizer(
             opt=tf.train.AdamOptimizer(learning_rate=learning_rate),
             var_list=train_vars)
@@ -134,15 +143,19 @@ def finetune(sess,
         opt_apply = opt.apply_gradients()
         summary_loss = tf.summary.scalar('loss', opt_apply)
     else:
-        opt_apply = tf.train.AdamOptimizer(
-            learning_rate=learning_rate).minimize(
-                loss, var_list=train_vars)
+        opt = tf.train.AdamOptimizer(learning_rate=args.learning_rate)
+        if use_memory_saving_gradients:
+            opt_grads = memory_saving_gradients.gradients(loss, train_vars)
+        else:
+            opt_grads = tf.gradients(loss, train_vars)
+        opt_grads = list(zip(opt_grads, train_vars))
+        opt_apply = opt.apply_gradients(opt_grads)
         summary_loss = tf.summary.scalar('loss', loss)
 
     summary_log = tf.summary.FileWriter(checkpoint_path)
 
     saver = tf.train.Saver(
-        var_list=train_vars,
+        var_list=all_vars,
         max_to_keep=max_checkpoints)
     sess.run(tf.global_variables_initializer())
 
