@@ -570,6 +570,12 @@ def cmd():
         '--temperature',  help="[generate] Temperature of the generated texts",
         nargs='?', default=0.7, type=float)
     parser.add_argument(
+        '--top_k',  help="[generate] Sample only from top k tokens",
+        nargs='?', default=0, type=int)
+    parser.add_argument(
+        '--top_p',  help="[generate] Sample from top p prob (overrides top_k if nonzero)",
+        nargs='?', default=0.0, type=float)
+    parser.add_argument(
         '--batch_size',  help="[generate] Batch size for generation (increase for GPUs)",
         nargs='?', default=1, type=int)
     parser.add_argument(
@@ -608,7 +614,8 @@ def cmd():
                      temperature=args.temperature, batch_size=args.batch_size,
                      prefix=args.prefix, truncate=args.truncate,
                      include_prefix=args.include_prefix,
-                     sample_delim=args.sample_delim, run_name=args.run_name)
+                     sample_delim=args.sample_delim, run_name=args.run_name,
+                     top_k=args.top_k, top_p=args.top_p)
 
 
 def cmd_finetune(dataset, run_name, model_name, steps,
@@ -630,7 +637,8 @@ def cmd_finetune(dataset, run_name, model_name, steps,
 def cmd_generate(nfiles, nsamples, folder,
                  length, temperature, batch_size,
                  prefix, truncate, include_prefix,
-                 sample_delim, run_name):
+                 sample_delim, run_name,
+                 top_k, top_p):
     """Wrapper script for generating text via the CLI.
     The files are generated into a folder, which can be downloaded
     recursively by downloading the entire folder.
@@ -658,5 +666,7 @@ def cmd_generate(nfiles, nsamples, folder,
                          prefix=prefix,
                          truncate=truncate,
                          include_prefix=include_prefix,
-                         sample_delim=sample_delim
+                         sample_delim=sample_delim,
+                         top_k=top_k,
+                         top_p=top_p
                          )
