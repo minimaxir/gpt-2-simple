@@ -311,14 +311,13 @@ def generate(sess,
              destination_path=None,
              sample_delim='=' * 20 + '\n',
              prefix=None,
-             model_name='117M',
              seed=None,
              nsamples=1,
              batch_size=1,
              length=1023,
              temperature=0.7,
              top_k=0,
-             run_name='run1',
+             top_p=0.0,
              include_prefix=True):
     """Generates text from a model loaded into memory.
 
@@ -353,7 +352,7 @@ def generate(sess,
         start_token=enc.encoder['<|endoftext|>'] if not prefix else None,
         context=context if prefix else None,
         batch_size=batch_size,
-        temperature=temperature, top_k=top_k
+        temperature=temperature, top_k=top_k, top_p=top_p
     )[:, 1:]
 
     if destination_path:
@@ -404,14 +403,13 @@ def generate_to_file(sess,
                      destination_path='gpt_2_gen_texts.txt',
                      sample_delim='=' * 20 + '\n',
                      prefix=None,
-                     model_name='117M',
                      seed=None,
                      nsamples=1,
                      batch_size=1,
                      length=1023,
                      temperature=0.7,
                      top_k=0,
-                     run_name='run1',
+                     top_p=0.0,
                      include_prefix=True):
     """Generates the texts to a file.
 
@@ -426,14 +424,13 @@ def generate_to_file(sess,
              destination_path,
              sample_delim,
              prefix,
-             model_name,
              seed,
              nsamples,
              batch_size,
              length,
              temperature,
              top_k,
-             run_name,
+             top_p,
              include_prefix)
 
 
@@ -661,6 +658,5 @@ def cmd_generate(nfiles, nsamples, folder,
                          prefix=prefix,
                          truncate=truncate,
                          include_prefix=include_prefix,
-                         sample_delim=sample_delim,
-                         run_name=run_name
+                         sample_delim=sample_delim
                          )
