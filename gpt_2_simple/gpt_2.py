@@ -461,10 +461,11 @@ def get_tarfile_name(checkpoint_folder):
     return tarfile_name
 
 
-def copy_checkpoint_to_gdrive(checkpoint_folder=os.path.join('checkpoint', 'run1')):
+def copy_checkpoint_to_gdrive(run_name='run1'):
     """Copies the checkpoint folder to a mounted Google Drive."""
     is_mounted()
 
+    checkpoint_folder = os.path.join('checkpoint', run_name)
     file_path = get_tarfile_name(checkpoint_folder)
 
     # Reference: https://stackoverflow.com/a/17081026
@@ -474,10 +475,11 @@ def copy_checkpoint_to_gdrive(checkpoint_folder=os.path.join('checkpoint', 'run1
     shutil.copyfile(file_path, "/content/drive/My Drive/" + file_path)
 
 
-def copy_checkpoint_from_gdrive(checkpoint_folder=os.path.join('checkpoint', 'run1')):
+def copy_checkpoint_from_gdrive(run_name='run1'):
     """Copies the checkpoint folder from a mounted Google Drive."""
     is_mounted()
 
+    checkpoint_folder = os.path.join('checkpoint', run_name)
     file_path = get_tarfile_name(checkpoint_folder)
 
     shutil.copyfile("/content/drive/My Drive/" + file_path, file_path)
