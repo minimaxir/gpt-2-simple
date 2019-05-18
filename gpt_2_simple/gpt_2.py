@@ -86,7 +86,7 @@ def finetune(sess,
              max_checkpoints=1,
              use_memory_saving_gradients=False,
              only_train_transformer_layers=False,
-             model_load=False):
+             overwrite=False):
     """Finetunes the model on the given dataset.
 
     Adapted from https://github.com/nshepperd/gpt-2/blob/finetuning/train.py.
@@ -105,10 +105,15 @@ def finetune(sess,
             pass
 
     maketree(checkpoint_path)
-    if not model_load:
-        for file in ['hparams.json', 'encoder.json', 'vocab.bpe']:
-            shutil.copyfile(os.path.join('models', model_name, file),
-                            os.path.join(checkpoint_path, file))
+    files = [f for f in os.listdir(checkpoint_path) if os.path.isfile(f)]
+    for file in ['hparams.json', 'encoder.json', 'vocab.bpe']:
+        if file not in files:
+            try:
+                shutil.copyfile(os.path.join('models', model_name, file),
+                                os.path.join(checkpoint_path, file))
+            except FileNotFoundError as fnf_error:
+                print("You need to download the GPT-2 model first via download_gpt2()")
+                raise(fnf_error)
 
     enc = encoder.get_encoder(checkpoint_path)
     hparams = model.default_hparams()
@@ -181,9 +186,6 @@ def finetune(sess,
     print('Loading checkpoint', ckpt)
     saver.restore(sess, ckpt)
 
-    if model_load:
-        return
-
     print('Loading dataset...')
     chunks = load_dataset(enc, dataset, combine)
     data_sampler = Sampler(chunks)
@@ -235,6 +237,12 @@ def finetune(sess,
 
     def sample_batch():
         return [data_sampler.sample(1024) for _ in range(batch_size)]
+
+    if overwrite:
+        save()
+        for file in files:
+            if file.startswith('model'):
+                os.remove(os.path.join(checkpoint_path, file))
 
     avg_loss = (0.0, 0.0)
     start_time = time.time()
