@@ -529,6 +529,23 @@ def encode_csv(csv_path, out_path='csv_encoded.txt', header=True,
                 w.write(start_token + row[0] + end_token + "\n")
 
 
+def encode_dataset(file_path, out_path='text_encoded.npz',
+                   model_name="117M",
+                   combine=50000):
+    """Preencodes a text document into chunks and compresses it,
+    saving time when generated.
+
+    Adapted from https://github.com/nshepperd/gpt-2/blob/finetuning/encode.py
+    """
+
+    model_path = os.path.join('models', model_name)
+    enc = encoder.get_encoder(model_path)
+    print('Reading files')
+    chunks = load_dataset(enc, file_path, combine)
+    print('Writing', out_path)
+    np.savez_compressed(out_path, *chunks)
+
+
 def cmd():
     """Function called when invoking from the terminal."""
 
