@@ -86,7 +86,7 @@ def finetune(sess,
              max_checkpoints=1,
              use_memory_saving_gradients=False,
              only_train_transformer_layers=False,
-             model_load=False):
+             overwrite=False):
     """Finetunes the model on the given dataset.
 
     Adapted from https://github.com/nshepperd/gpt-2/blob/finetuning/train.py.
@@ -105,10 +105,15 @@ def finetune(sess,
             pass
 
     maketree(checkpoint_path)
-    if not model_load:
-        for file in ['hparams.json', 'encoder.json', 'vocab.bpe']:
-            shutil.copyfile(os.path.join('models', model_name, file),
-                            os.path.join(checkpoint_path, file))
+    files = [f for f in os.listdir(checkpoint_path)]
+    for file in ['hparams.json', 'encoder.json', 'vocab.bpe']:
+        if file not in files:
+            try:
+                shutil.copyfile(os.path.join('models', model_name, file),
+                                os.path.join(checkpoint_path, file))
+            except FileNotFoundError as fnf_error:
+                print("You need to download the GPT-2 model first via download_gpt2()")
+                raise(fnf_error)
 
     enc = encoder.get_encoder(checkpoint_path)
     hparams = model.default_hparams()
@@ -181,9 +186,6 @@ def finetune(sess,
     print('Loading checkpoint', ckpt)
     saver.restore(sess, ckpt)
 
-    if model_load:
-        return
-
     print('Loading dataset...')
     chunks = load_dataset(enc, dataset, combine)
     data_sampler = Sampler(chunks)
@@ -235,6 +237,12 @@ def finetune(sess,
 
     def sample_batch():
         return [data_sampler.sample(1024) for _ in range(batch_size)]
+
+    if overwrite and restore_from == 'latest':
+        for file in files:
+            if file.startswith('model') or file.startswith('events'):
+                os.remove(os.path.join(checkpoint_path, file))
+        save()
 
     avg_loss = (0.0, 0.0)
     start_time = time.time()
@@ -306,19 +314,19 @@ def load_gpt2(sess,
 
 
 def generate(sess,
+             run_name='run1',
              return_as_list=False,
              truncate=None,
              destination_path=None,
              sample_delim='=' * 20 + '\n',
              prefix=None,
-             model_name='117M',
              seed=None,
              nsamples=1,
              batch_size=1,
              length=1023,
              temperature=0.7,
              top_k=0,
-             run_name='run1',
+             top_p=0.0,
              include_prefix=True):
     """Generates text from a model loaded into memory.
 
@@ -353,7 +361,7 @@ def generate(sess,
         start_token=enc.encoder['<|endoftext|>'] if not prefix else None,
         context=context if prefix else None,
         batch_size=batch_size,
-        temperature=temperature, top_k=top_k
+        temperature=temperature, top_k=top_k, top_p=top_p
     )[:, 1:]
 
     if destination_path:
@@ -400,18 +408,18 @@ def generate(sess,
 
 
 def generate_to_file(sess,
+                     run_name='run1',
                      truncate=None,
                      destination_path='gpt_2_gen_texts.txt',
                      sample_delim='=' * 20 + '\n',
                      prefix=None,
-                     model_name='117M',
                      seed=None,
                      nsamples=1,
                      batch_size=1,
                      length=1023,
                      temperature=0.7,
                      top_k=0,
-                     run_name='run1',
+                     top_p=0.0,
                      include_prefix=True):
     """Generates the texts to a file.
 
@@ -421,19 +429,19 @@ def generate_to_file(sess,
     """
 
     generate(sess,
+             run_name,
              False,
              truncate,
              destination_path,
              sample_delim,
              prefix,
-             model_name,
              seed,
              nsamples,
              batch_size,
              length,
              temperature,
              top_k,
-             run_name,
+             top_p,
              include_prefix)
 
 
@@ -456,29 +464,39 @@ def get_tarfile_name(checkpoint_folder):
     return tarfile_name
 
 
-def copy_checkpoint_to_gdrive(checkpoint_folder=os.path.join('checkpoint', 'run1')):
+def copy_checkpoint_to_gdrive(run_name='run1', copy_folder=False):
     """Copies the checkpoint folder to a mounted Google Drive."""
     is_mounted()
 
-    file_path = get_tarfile_name(checkpoint_folder)
+    checkpoint_folder = os.path.join('checkpoint', run_name)
 
-    # Reference: https://stackoverflow.com/a/17081026
-    with tarfile.open(file_path, 'w') as tar:
-        tar.add(checkpoint_folder)
+    if copy_folder:
+        shutil.copytree(checkpoint_folder, "/content/drive/My Drive/" + checkpoint_folder)
+    else:
+        file_path = get_tarfile_name(checkpoint_folder)
 
-    shutil.copyfile(file_path, "/content/drive/My Drive/" + file_path)
+        # Reference: https://stackoverflow.com/a/17081026
+        with tarfile.open(file_path, 'w') as tar:
+            tar.add(checkpoint_folder)
+
+        shutil.copyfile(file_path, "/content/drive/My Drive/" + file_path)
 
 
-def copy_checkpoint_from_gdrive(checkpoint_folder=os.path.join('checkpoint', 'run1')):
+def copy_checkpoint_from_gdrive(run_name='run1', copy_folder=False):
     """Copies the checkpoint folder from a mounted Google Drive."""
     is_mounted()
 
-    file_path = get_tarfile_name(checkpoint_folder)
+    checkpoint_folder = os.path.join('checkpoint', run_name)
 
-    shutil.copyfile("/content/drive/My Drive/" + file_path, file_path)
+    if copy_folder:
+        shutil.copytree("/content/drive/My Drive/" + checkpoint_folder, checkpoint_folder)
+    else:
+        file_path = get_tarfile_name(checkpoint_folder)
 
-    with tarfile.open(file_path, 'r') as tar:
-        tar.extractall()
+        shutil.copyfile("/content/drive/My Drive/" + file_path, file_path)
+
+        with tarfile.open(file_path, 'r') as tar:
+            tar.extractall()
 
 
 def copy_file_to_gdrive(file_path):
@@ -522,6 +540,23 @@ def encode_csv(csv_path, out_path='csv_encoded.txt', header=True,
                 w.write(start_token + row[0] + end_token + "\n")
 
 
+def encode_dataset(file_path, out_path='text_encoded.npz',
+                   model_name="117M",
+                   combine=50000):
+    """Preencodes a text document into chunks and compresses it,
+    saving time when generated.
+
+    Adapted from https://github.com/nshepperd/gpt-2/blob/finetuning/encode.py
+    """
+
+    model_path = os.path.join('models', model_name)
+    enc = encoder.get_encoder(model_path)
+    print('Reading files')
+    chunks = load_dataset(enc, file_path, combine)
+    print('Writing', out_path)
+    np.savez_compressed(out_path, *chunks)
+
+
 def cmd():
     """Function called when invoking from the terminal."""
 
@@ -558,6 +593,9 @@ def cmd():
         '--print_every',  help="[finetune] After how many steps to print progress",
         nargs='?', default=10, type=int)
     parser.add_argument(
+        '--overwrite',  help="[finetune] Overwrite existing model when continuing training",
+        nargs='?', default=False, type=lambda x: (str(x).lower() == 'true'))
+    parser.add_argument(
         '--nfiles',  help="[generate] How many files to generate.",
         nargs='?', default=1, type=int)
     parser.add_argument(
@@ -572,6 +610,12 @@ def cmd():
     parser.add_argument(
         '--temperature',  help="[generate] Temperature of the generated texts",
         nargs='?', default=0.7, type=float)
+    parser.add_argument(
+        '--top_k',  help="[generate] Sample only from top k tokens",
+        nargs='?', default=0, type=int)
+    parser.add_argument(
+        '--top_p',  help="[generate] Sample from top p prob (overrides top_k if nonzero)",
+        nargs='?', default=0.0, type=float)
     parser.add_argument(
         '--batch_size',  help="[generate] Batch size for generation (increase for GPUs)",
         nargs='?', default=1, type=int)
@@ -604,19 +648,21 @@ def cmd():
                      steps=args.steps, restore_from=args.restore_from,
                      sample_every=args.sample_every,
                      save_every=args.save_every,
-                     print_every=args.print_every)
+                     print_every=args.print_every,
+                     overwrite=args.overwrite)
     if args.mode == "generate":
         cmd_generate(nfiles=args.nfiles, nsamples=args.nsamples,
                      folder=args.folder, length=args.length,
                      temperature=args.temperature, batch_size=args.batch_size,
                      prefix=args.prefix, truncate=args.truncate,
                      include_prefix=args.include_prefix,
-                     sample_delim=args.sample_delim, run_name=args.run_name)
+                     sample_delim=args.sample_delim, run_name=args.run_name,
+                     top_k=args.top_k, top_p=args.top_p)
 
 
 def cmd_finetune(dataset, run_name, model_name, steps,
                  restore_from, sample_every,
-                 save_every, print_every):
+                 save_every, print_every, overwrite):
     """Wrapper script for finetuning the model via the CLI."""
 
     if not is_gpt2_downloaded(model_name=model_name):
@@ -627,13 +673,15 @@ def cmd_finetune(dataset, run_name, model_name, steps,
              model_name=model_name,
              steps=steps, restore_from=restore_from,
              sample_every=sample_every, save_every=save_every,
-             print_every=print_every)
+             print_every=print_every,
+             overwrite=overwrite)
 
 
 def cmd_generate(nfiles, nsamples, folder,
                  length, temperature, batch_size,
                  prefix, truncate, include_prefix,
-                 sample_delim, run_name):
+                 sample_delim, run_name,
+                 top_k, top_p):
     """Wrapper script for generating text via the CLI.
     The files are generated into a folder, which can be downloaded
     recursively by downloading the entire folder.
@@ -662,5 +710,6 @@ def cmd_generate(nfiles, nsamples, folder,
                          truncate=truncate,
                          include_prefix=include_prefix,
                          sample_delim=sample_delim,
-                         run_name=run_name
+                         top_k=top_k,
+                         top_p=top_p
                          )
