@@ -583,6 +583,9 @@ def cmd():
         '--print_every',  help="[finetune] After how many steps to print progress",
         nargs='?', default=10, type=int)
     parser.add_argument(
+        '--overwrite',  help="[finetune] Overwrite existing model when continuing training",
+        nargs='?', default=False, type=lambda x: (str(x).lower() == 'true'))
+    parser.add_argument(
         '--nfiles',  help="[generate] How many files to generate.",
         nargs='?', default=1, type=int)
     parser.add_argument(
@@ -635,7 +638,8 @@ def cmd():
                      steps=args.steps, restore_from=args.restore_from,
                      sample_every=args.sample_every,
                      save_every=args.save_every,
-                     print_every=args.print_every)
+                     print_every=args.print_every,
+                     overwrite=args.overwrite)
     if args.mode == "generate":
         cmd_generate(nfiles=args.nfiles, nsamples=args.nsamples,
                      folder=args.folder, length=args.length,
@@ -648,7 +652,7 @@ def cmd():
 
 def cmd_finetune(dataset, run_name, model_name, steps,
                  restore_from, sample_every,
-                 save_every, print_every):
+                 save_every, print_every, overwrite):
     """Wrapper script for finetuning the model via the CLI."""
 
     if not is_gpt2_downloaded(model_name=model_name):
@@ -659,7 +663,8 @@ def cmd_finetune(dataset, run_name, model_name, steps,
              model_name=model_name,
              steps=steps, restore_from=restore_from,
              sample_every=sample_every, save_every=save_every,
-             print_every=print_every)
+             print_every=print_every,
+             overwrite=overwrite)
 
 
 def cmd_generate(nfiles, nsamples, folder,
