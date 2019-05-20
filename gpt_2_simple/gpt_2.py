@@ -105,7 +105,7 @@ def finetune(sess,
             pass
 
     maketree(checkpoint_path)
-    files = [f for f in os.listdir(checkpoint_path) if os.path.isfile(f)]
+    files = [f for f in os.listdir(checkpoint_path)]
     for file in ['hparams.json', 'encoder.json', 'vocab.bpe']:
         if file not in files:
             try:
@@ -238,11 +238,11 @@ def finetune(sess,
     def sample_batch():
         return [data_sampler.sample(1024) for _ in range(batch_size)]
 
-    if overwrite:
-        save()
+    if overwrite and restore_from == 'latest':
         for file in files:
-            if file.startswith('model'):
+            if file.startswith('model') or file.startswith('events'):
                 os.remove(os.path.join(checkpoint_path, file))
+        save()
 
     avg_loss = (0.0, 0.0)
     start_time = time.time()
@@ -314,6 +314,7 @@ def load_gpt2(sess,
 
 
 def generate(sess,
+             run_name='run1',
              return_as_list=False,
              truncate=None,
              destination_path=None,
