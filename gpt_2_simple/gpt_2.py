@@ -408,6 +408,7 @@ def generate(sess,
 
 
 def generate_to_file(sess,
+                     run_name='run1',
                      truncate=None,
                      destination_path='gpt_2_gen_texts.txt',
                      sample_delim='=' * 20 + '\n',
@@ -428,6 +429,7 @@ def generate_to_file(sess,
     """
 
     generate(sess,
+             run_name,
              False,
              truncate,
              destination_path,
