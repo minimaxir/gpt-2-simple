@@ -247,6 +247,9 @@ def finetune(sess,
     avg_loss = (0.0, 0.0)
     start_time = time.time()
 
+    if steps:
+        steps = int(steps)
+    
     try:
         while True:
             if steps > 0 and counter == (counter_base + steps):
