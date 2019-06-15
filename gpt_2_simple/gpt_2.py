@@ -83,7 +83,7 @@ def download_gpt2(model_name='117M'):
         download_file_with_progress(url_base="https://storage.googleapis.com/gpt-2", sub_dir=sub_dir, file_name=file_name)
 
 
-def start_tf_sess(threads=-1):
+def start_tf_sess(threads=-1, server=None):
     """
     Returns a tf.Session w/ config
     """
@@ -94,6 +94,9 @@ def start_tf_sess(threads=-1):
         config.intra_op_parallelism_threads = threads
         config.inter_op_parallelism_threads = threads
 
+    if server is not None:
+        return tf.Session(target=server.target, config=config)
+    
     return tf.Session(config=config)
 
 
