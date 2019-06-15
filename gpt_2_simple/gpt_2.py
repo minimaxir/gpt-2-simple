@@ -381,7 +381,7 @@ def generate(sess,
             generated += 1
             gen_text = enc.decode(out[i])
             if prefix:
-                gen_text = prefix[0] + gen_text
+                gen_text = enc.decode(context_tokens[:1]) + gen_text
             if truncate:
                 truncate_esc = re.escape(truncate)
                 if prefix and not include_prefix:
