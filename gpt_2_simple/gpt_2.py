@@ -375,6 +375,9 @@ def generate(sess,
     if nsamples == 1:
         sample_delim = ''
 
+    if prefix == '':
+        prefix = None
+
     if prefix:
         context = tf.placeholder(tf.int32, [batch_size, None])
 
