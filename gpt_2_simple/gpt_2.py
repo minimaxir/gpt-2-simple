@@ -429,10 +429,11 @@ def generate(sess,
                 trunc_text = re.search(pattern, gen_text, re.S)
                 if trunc_text:
                     gen_text = trunc_text.group(1)
+            gen_text = gen_text.lstrip('\n')
             if destination_path:
                 f.write("{}\n{}".format(gen_text, sample_delim))
             if not return_as_list and not destination_path:
-                print("{}\n{}".format(gen_text, sample_delim))
+                print("{}\n{}".format(gen_text, sample_delim), end='')
             gen_texts.append(gen_text)
 
     if destination_path:
