@@ -378,9 +378,6 @@ def generate(sess,
     if prefix == '':
         prefix = None
 
-    if prefix:
-        context = tf.placeholder(tf.int32, [batch_size, None])
-
     CHECKPOINT_DIR = 'checkpoint'
     SAMPLE_DIR = 'samples'
 
@@ -391,11 +388,17 @@ def generate(sess,
     with open(os.path.join(checkpoint_path, 'hparams.json')) as f:
         hparams.override_from_dict(json.load(f))
 
+    if prefix:
+        context = tf.placeholder(tf.int32, [batch_size, None])
+        context_tokens = enc.encode(prefix)
+        assert len(context_tokens) < length
+
     np.random.seed(seed)
     tf.set_random_seed(seed)
 
     output = sample.sample_sequence(
-        hparams=hparams, length=length,
+        hparams=hparams,
+        length=min(length, 1023 - (len(context_tokens) if prefix else 0)),
         start_token=enc.encoder['<|endoftext|>'] if not prefix else None,
         context=context if prefix else None,
         batch_size=batch_size,
@@ -404,8 +407,6 @@ def generate(sess,
 
     if destination_path:
         f = open(destination_path, 'w')
-    if prefix:
-        context_tokens = enc.encode(prefix)
     generated = 0
     gen_texts = []
     while generated < nsamples:
