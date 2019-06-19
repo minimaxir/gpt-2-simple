@@ -391,7 +391,6 @@ def generate(sess,
     if prefix:
         context = tf.placeholder(tf.int32, [batch_size, None])
         context_tokens = enc.encode(prefix)
-        assert len(context_tokens) < length
 
     np.random.seed(seed)
     tf.set_random_seed(seed)
