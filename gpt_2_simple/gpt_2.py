@@ -740,6 +740,7 @@ def cmd_generate(nfiles, nsamples, folder,
                     'gpt2_gentext_{:%Y%m%d_%H%M%S}.txt'.format(datetime.utcnow()))
 
         generate_to_file(sess,
+                         run_name=run_name,
                          destination_path=gen_file,
                          length=length,
                          temperature=temperature,
