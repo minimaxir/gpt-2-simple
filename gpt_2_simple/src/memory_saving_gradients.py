@@ -10,7 +10,7 @@ sys.setrecursionlimit(10000)
 util = sys.modules[__name__]
 
 # getting rid of "WARNING:tensorflow:VARIABLES collection name is deprecated"
-setattr(tf.GraphKeys, "VARIABLES", "variables")
+setattr(tf.compat.v1.GraphKeys, "VARIABLES", "variables")
 
 # save original gradients since tf.gradient could be monkey-patched to point
 # to our version
