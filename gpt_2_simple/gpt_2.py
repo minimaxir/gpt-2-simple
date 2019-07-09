@@ -95,7 +95,7 @@ def start_tf_sess(threads=-1, server=None):
         config.inter_op_parallelism_threads = threads
 
     if server is not None:
-        return tf.Session(target=server.target, config=config)
+        return tf.compat.v1.Session(target=server.target, config=config)
     
     return tf.compat.v1.Session(config=config)
 
@@ -164,7 +164,7 @@ def finetune(sess,
     context = tf.compat.v1.placeholder(tf.int32, [batch_size, None])
     output = model.model(hparams=hparams, X=context)
     loss = tf.reduce_mean(
-        tf.nn.sparse_softmax_cross_entropy_with_logits(
+        input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
             labels=context[:, 1:], logits=output['logits'][:, :-1]))
 
     tf_sample = sample.sample_sequence(
@@ -188,14 +188,14 @@ def finetune(sess,
         opt_apply = opt.apply_gradients()
         summary_loss = tf.compat.v1.summary.scalar('loss', opt_apply)
     else:
-        opt = tf.train.AdamOptimizer(learning_rate=learning_rate)
+        opt = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
         if use_memory_saving_gradients:
             opt_grads = memory_saving_gradients.gradients(loss, train_vars)
         else:
-            opt_grads = tf.gradients(loss, train_vars)
+            opt_grads = tf.gradients(ys=loss, xs=train_vars)
         opt_grads = list(zip(opt_grads, train_vars))
         opt_apply = opt.apply_gradients(opt_grads)
-        summary_loss = tf.summary.scalar('loss', loss)
+        summary_loss = tf.compat.v1.summary.scalar('loss', loss)
 
     summary_log = tf.compat.v1.summary.FileWriter(checkpoint_path)
 

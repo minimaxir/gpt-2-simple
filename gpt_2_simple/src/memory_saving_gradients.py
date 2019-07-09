@@ -86,7 +86,7 @@ def gradients(ys, xs, grad_ys=None, checkpoints='collection', **kwargs):
     # given as input
     if type(checkpoints) is not list:
         if checkpoints == 'collection':
-            checkpoints = tf.get_collection('checkpoints')
+            checkpoints = tf.compat.v1.get_collection('checkpoints')
 
         elif checkpoints == 'speed':
             # checkpoint all expensive ops to maximize running speed
@@ -333,10 +333,10 @@ def capture_ops():
   micros = int(time.time()*10**6)
   scope_name = str(micros)
   op_list = []
-  with tf.name_scope(scope_name):
+  with tf.compat.v1.name_scope(scope_name):
     yield op_list
 
-  g = tf.get_default_graph()
+  g = tf.compat.v1.get_default_graph()
   op_list.extend(ge.select_ops(scope_name+"/.*", graph=g))
 
 def _to_op(tensor_or_op):
