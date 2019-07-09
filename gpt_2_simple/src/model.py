@@ -1,6 +1,36 @@
 import numpy as np
 import tensorflow as tf
-from tensorflow.contrib.training import HParams
+#from tensorflow.contrib.training import HParams
+
+class HParams():
+    def __init__(self, n_vocab, n_ctx, n_embd, n_head, n_layer):
+        self.n_vocab = n_vocab
+        self.n_ctx = n_ctx
+        self.n_embd = n_embd
+        self.n_head = n_head
+        self.n_layer = n_layer
+        
+    def override_from_dict(self, param_dict):
+        try:
+            self.n_vocab = param_dict['n_vocab']
+        except: 
+            pass
+        try:
+            self.n_ctx = param_dict['n_ctx']
+        except:
+            pass
+        try:
+            self.n_embd = param_dict['n_embd']
+        except:
+            pass
+        try:
+            self.n_head = param_dict['n_head']
+        except:
+            pass
+        try:
+            self.n_layer = param_dict['n_layer']
+        except:
+            pass
 
 def default_hparams():
     return HParams(
