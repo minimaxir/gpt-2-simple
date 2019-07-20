@@ -363,8 +363,7 @@ def generate(sess,
              top_k=0,
              top_p=0.0,
              include_prefix=True,
-             split_context=0.5,
-             ):
+             split_context=0.5):
     """Generates text from a model loaded into memory.
 
     Adapted from https://github.com/openai/gpt-2/blob/master/src/interactive_conditional_samples.py
@@ -393,7 +392,12 @@ def generate(sess,
     hparams = model.default_hparams()
     with open(os.path.join(checkpoint_path, 'hparams.json')) as f:
         hparams.override_from_dict(json.load(f))
-
+        
+    context = tf.placeholder(tf.int32, [batch_size, None])
+    if prefix:
+        context_tokens = [enc.encode(prefix)] * batch_size
+    else:
+        context_tokens = [[enc.encoder['<|endoftext|>']] for _ in range(batch_size)]
     np.random.seed(seed)
     tf.set_random_seed(seed)
 
@@ -402,57 +406,53 @@ def generate(sess,
     generated = 0
     gen_texts = []
     while generated < nsamples:
-        trunc_text = ''
         gen_text = [''] * batch_size
-        while not trunc_text:
-            if prefix:
-                context = tf.placeholder(tf.int32, [batch_size, None])
-                context_tokens = enc.encode(prefix)
-                output = sample.sample_sequence(
-                    hparams=hparams,
-                    length=min(length if length else 1023, 1023 - (len(context_tokens))),
-                    start_token=None,
-                    context=context,
-                    batch_size=batch_size,
-                    temperature=temperature, top_k=top_k, top_p=top_p
-                )[:, 1:]
-                out = sess.run(output, feed_dict={
-                        context: batch_size * [context_tokens]
-                    })
+        truncated = [False] * batch_size
+        total_tokens = 0
+        
+        while False in truncated:
+            num_tokens = 1023 - (len(context_tokens[0]))
+            output = sample.sample_sequence(
+                hparams=hparams,
+                length=min(length if length else 1023, num_tokens),
+                context=context,
+                batch_size=batch_size,
+                temperature=temperature, top_k=top_k, top_p=top_p
+            )[:, 1:]
 
-            else:
-                output = sample.sample_sequence(
-                    hparams=hparams,
-                    length=min(length if length else 1023, 1023),
-                    start_token=enc.encoder['<|endoftext|>'],
-                    context=None,
-                    batch_size=batch_size,
-                    temperature=temperature, top_k=top_k, top_p=top_p
-                )[:, 1:]
-                out = sess.run(output)
-
+            out = sess.run(output, feed_dict={
+                    context: context_tokens
+                })
+                
+            total_tokens += num_tokens
+            
             for i in range(batch_size):
                 text = enc.decode(out[i])
                 if prefix:
-                    text = enc.decode(context_tokens[:1]) + text
-                if truncate and not length:
-                    split = [s + ' ' for s in text.split(' ')]
-                    prefix = ''.join(split[int(len(split)*split_context):])
+                    text = enc.decode(context_tokens[i][:1]) + text
+                if truncate or all(gen_text):
+                    context_tokens[i] = out[i][int(len(out[i])*(1-split_context)):]
+                    if gen_text[i] != '':
+                        split = re.split('[.!?]', gen_text[i])
+                        text = text.partition(list(filter(None, split))[-1])[-1]
+                    
+                    if truncate:
+                        truncate_esc = re.escape(truncate)
+                        if prefix and not include_prefix:
+                            prefix_esc = re.escape(prefix)
+                            pattern = '(?:{})(.*?)(?:{})'.format(prefix_esc,
+                                                                 truncate_esc)
+                        else:
+                            pattern = '(.*?)(?:{})'.format(truncate_esc)
 
-                    truncate_esc = re.escape(truncate)
-                    if prefix and not include_prefix:
-                        prefix_esc = re.escape(prefix)
-                        pattern = '(?:{})(.*?)(?:{})'.format(prefix_esc,
-                                                             truncate_esc)
-                    else:
-                        pattern = '(.*?)(?:{})'.format(truncate_esc)
+                        trunc_text = re.search(pattern, text, re.S)
+                        if trunc_text:
+                            text = trunc_text.group(1)
 
-                    trunc_text = re.search(pattern, text, re.S)
-                    if trunc_text:
-                        text = trunc_text.group(1)
-                else:
-                    trunc_text = True
-                gen_text[i] += text.lstrip('\n')
+                if not truncated[i]:
+                    gen_text[i] += text.lstrip('\n')
+                if trunc_text or (length is not None and total_tokens >= length-1):
+                    truncated[i] = True
 
         for gen in gen_text:
             if destination_path:
@@ -698,7 +698,7 @@ def cmd():
         '--sample_delim',  help="[generate] Delimiter between each generated sample.",
         nargs='?', default='=' * 20 + '\n', type=str)
     parser.add_argument(
-        '--split_context',  help="[generate] When generating a sample of non-fixed length, feed this proportion of previous generation as context.",
+        '--split_context',  help="[generate] When generating a sample longer than 1023 tokens, feed this proportion of previous generation as context.",
         nargs='?', default=0.5, type=float)
 
     # Positional arguments
