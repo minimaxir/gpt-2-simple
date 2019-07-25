@@ -87,7 +87,7 @@ def start_tf_sess(threads=-1, server=None):
     """
     Returns a tf.Session w/ config
     """
-    config = tf.ConfigProto()
+    config = tf.compat.v1.ConfigProto()
     config.gpu_options.allow_growth = True
     config.graph_options.rewrite_options.layout_optimizer = rewriter_config_pb2.RewriterConfig.OFF
     if threads > 0:
@@ -95,9 +95,9 @@ def start_tf_sess(threads=-1, server=None):
         config.inter_op_parallelism_threads = threads
 
     if server is not None:
-        return tf.Session(target=server.target, config=config)
+        return tf.compat.v1.Session(target=server.target, config=config)
     
-    return tf.Session(config=config)
+    return tf.compat.v1.Session(config=config)
 
 
 def finetune(sess,
@@ -161,10 +161,10 @@ def finetune(sess,
         only_train_transformer_layers = True
         accumulate_gradients = 1
 
-    context = tf.placeholder(tf.int32, [batch_size, None])
+    context = tf.compat.v1.placeholder(tf.int32, [batch_size, None])
     output = model.model(hparams=hparams, X=context)
     loss = tf.reduce_mean(
-        tf.nn.sparse_softmax_cross_entropy_with_logits(
+        input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
             labels=context[:, 1:], logits=output['logits'][:, :-1]))
 
     tf_sample = sample.sample_sequence(
@@ -175,34 +175,34 @@ def finetune(sess,
         temperature=1.0,
         top_k=40)
 
-    all_vars = [v for v in tf.trainable_variables() if 'model' in v.name]
+    all_vars = [v for v in tf.compat.v1.trainable_variables() if 'model' in v.name]
     train_vars = [v for v in all_vars if '/h' in v.name] if only_train_transformer_layers else all_vars
     if accumulate_gradients > 1:
         if use_memory_saving_gradients:
             exit("Memory saving gradients are not implemented for gradient accumulation yet.")
         opt = AccumulatingOptimizer(
-            opt=tf.train.AdamOptimizer(learning_rate=learning_rate),
+            opt=tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate),
             var_list=train_vars)
         opt_reset = opt.reset()
         opt_compute = opt.compute_gradients(loss)
         opt_apply = opt.apply_gradients()
-        summary_loss = tf.summary.scalar('loss', opt_apply)
+        summary_loss = tf.compat.v1.summary.scalar('loss', opt_apply)
     else:
-        opt = tf.train.AdamOptimizer(learning_rate=learning_rate)
+        opt = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
         if use_memory_saving_gradients:
             opt_grads = memory_saving_gradients.gradients(loss, train_vars)
         else:
-            opt_grads = tf.gradients(loss, train_vars)
+            opt_grads = tf.gradients(ys=loss, xs=train_vars)
         opt_grads = list(zip(opt_grads, train_vars))
         opt_apply = opt.apply_gradients(opt_grads)
-        summary_loss = tf.summary.scalar('loss', loss)
+        summary_loss = tf.compat.v1.summary.scalar('loss', loss)
 
-    summary_log = tf.summary.FileWriter(checkpoint_path)
+    summary_log = tf.compat.v1.summary.FileWriter(checkpoint_path)
 
-    saver = tf.train.Saver(
+    saver = tf.compat.v1.train.Saver(
         var_list=all_vars,
         max_to_keep=max_checkpoints)
-    sess.run(tf.global_variables_initializer())
+    sess.run(tf.compat.v1.global_variables_initializer())
 
     if restore_from == 'latest':
         ckpt = tf.train.latest_checkpoint(checkpoint_path)
@@ -337,12 +337,12 @@ def load_gpt2(sess,
     with open(os.path.join(checkpoint_path, 'hparams.json')) as f:
         hparams.override_from_dict(json.load(f))
 
-    context = tf.placeholder(tf.int32, [1, None])
+    context = tf.compat.v1.placeholder(tf.int32, [1, None])
     output = model.model(hparams=hparams, X=context)
 
     ckpt = tf.train.latest_checkpoint(checkpoint_path)
-    saver = tf.train.Saver(allow_empty=True)
-    sess.run(tf.global_variables_initializer())
+    saver = tf.compat.v1.train.Saver(allow_empty=True)
+    sess.run(tf.compat.v1.global_variables_initializer())
 
     print('Loading checkpoint', ckpt)
     saver.restore(sess, ckpt)
@@ -389,11 +389,11 @@ def generate(sess,
         hparams.override_from_dict(json.load(f))
 
     if prefix:
-        context = tf.placeholder(tf.int32, [batch_size, None])
+        context = tf.compat.v1.placeholder(tf.int32, [batch_size, None])
         context_tokens = enc.encode(prefix)
 
     np.random.seed(seed)
-    tf.set_random_seed(seed)
+    tf.compat.v1.set_random_seed(seed)
 
     output = sample.sample_sequence(
         hparams=hparams,
