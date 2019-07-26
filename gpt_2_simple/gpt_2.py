@@ -25,7 +25,7 @@ from gpt_2_simple.src.load_dataset import load_dataset, Sampler
 from gpt_2_simple.src.accumulate import AccumulatingOptimizer
 
 
-def download_file_with_progress(url_base, sub_dir, file_name):
+def download_file_with_progress(url_base, sub_dir, model_name, file_name):
     """General utility for incrementally downloading files from the internet
     with progress bar
     from url_base / sub_dir / filename
@@ -46,8 +46,7 @@ def download_file_with_progress(url_base, sub_dir, file_name):
 
     # set to download 1MB at a time. This could be much larger with no issue
     DOWNLOAD_CHUNK_SIZE = 1024 * 1024
-
-    r = requests.get(url_base + "/" + sub_dir + "/" + file_name, stream=True)
+    r = requests.get(url_base + "/models/" + model_name + "/" + file_name, stream=True)
     with open(os.path.join(sub_dir, file_name), 'wb') as f:
         file_size = int(r.headers["content-length"])
         with tqdm(ncols=100, desc="Fetching " + file_name,
@@ -57,12 +56,15 @@ def download_file_with_progress(url_base, sub_dir, file_name):
                 pbar.update(DOWNLOAD_CHUNK_SIZE)
    
 
-def download_gpt2(model_name='117M'):
+def download_gpt2(model_dir='models', model_name='117M'):
     """Downloads the GPT-2 model into the current directory
     from Google Cloud Storage.
 
     Parameters
     ----------
+    model_dir : str
+        parent directory of model to download
+
     model_name : str
         name of the GPT-2 model to download. 
         As of 22 May 2019 one of "117M" or "345M" but may later include other 
@@ -71,8 +73,8 @@ def download_gpt2(model_name='117M'):
     Adapted from https://github.com/openai/gpt-2/blob/master/download_model.py
     """
 
-    # create the models/<model_name> subdirectory if not present
-    sub_dir = os.path.join('models', model_name)
+    # create the <model_dir>/<model_name> subdirectory if not present
+    sub_dir = os.path.join(model_dir, model_name)
     if not os.path.exists(sub_dir):
         os.makedirs(sub_dir)
     sub_dir = sub_dir.replace('\\', '/')  # needed for Windows
@@ -80,7 +82,10 @@ def download_gpt2(model_name='117M'):
     for file_name in ['checkpoint', 'encoder.json', 'hparams.json',
                       'model.ckpt.data-00000-of-00001', 'model.ckpt.index',
                       'model.ckpt.meta', 'vocab.bpe']:
-        download_file_with_progress(url_base="https://storage.googleapis.com/gpt-2", sub_dir=sub_dir, file_name=file_name)
+        download_file_with_progress(url_base="https://storage.googleapis.com/gpt-2",
+                                    sub_dir=sub_dir,
+                                    model_name=model_name,
+                                    file_name=file_name)
 
 
 def start_tf_sess(threads=-1, server=None):
@@ -104,12 +109,14 @@ def finetune(sess,
              dataset,
              steps=-1,
              model_name='117M',
+             model_dir='models',
              combine=50000,
              batch_size=1,
              learning_rate=0.0001,
              accumulate_gradients=5,
              restore_from='latest',
              run_name='run1',
+             checkpoint_dir='checkpoint',
              sample_every=100,
              sample_length=1023,
              sample_num=1,
@@ -124,11 +131,9 @@ def finetune(sess,
     Adapted from https://github.com/nshepperd/gpt-2/blob/finetuning/train.py.
     See that file for parameter definitions.
     """
-
-    CHECKPOINT_DIR = 'checkpoint'
     SAMPLE_DIR = 'samples'
 
-    checkpoint_path = os.path.join(CHECKPOINT_DIR, run_name)
+    checkpoint_path = os.path.join(checkpoint_dir, run_name)
 
     def maketree(path):
         try:
@@ -141,7 +146,7 @@ def finetune(sess,
     for file in ['hparams.json', 'encoder.json', 'vocab.bpe']:
         if file not in files:
             try:
-                shutil.copyfile(os.path.join('models', model_name, file),
+                shutil.copyfile(os.path.join(model_dir, model_name, file),
                                 os.path.join(checkpoint_path, file))
             except FileNotFoundError as fnf_error:
                 print("You need to download the GPT-2 model first via download_gpt2()")
@@ -209,10 +214,10 @@ def finetune(sess,
         if ckpt is None:
             # Get fresh GPT weights if new run.
             ckpt = tf.train.latest_checkpoint(
-                os.path.join('models', model_name))
+                os.path.join(model_dir, model_name))
     elif restore_from == 'fresh':
         ckpt = tf.train.latest_checkpoint(
-            os.path.join('models', model_name))
+            os.path.join(model_dir, model_name))
     else:
         ckpt = tf.train.latest_checkpoint(restore_from)
     print('Loading checkpoint', ckpt)
@@ -324,14 +329,13 @@ def finetune(sess,
 
 
 def load_gpt2(sess,
-              run_name="run1"):
+              run_name="run1",
+              checkpoint_dir="checkpoint"):
     """Loads the model checkpoint into a TensorFlow session
     for repeated predictions.
     """
 
-    CHECKPOINT_DIR = 'checkpoint'
-
-    checkpoint_path = os.path.join(CHECKPOINT_DIR, run_name)
+    checkpoint_path = os.path.join(checkpoint_dir, run_name)
 
     hparams = model.default_hparams()
     with open(os.path.join(checkpoint_path, 'hparams.json')) as f:
@@ -350,6 +354,8 @@ def load_gpt2(sess,
 
 def generate(sess,
              run_name='run1',
+             checkpoint_dir='checkpoint',
+             sample_dir='samples',
              return_as_list=False,
              truncate=None,
              destination_path=None,
@@ -378,10 +384,7 @@ def generate(sess,
     if prefix == '':
         prefix = None
 
-    CHECKPOINT_DIR = 'checkpoint'
-    SAMPLE_DIR = 'samples'
-
-    checkpoint_path = os.path.join(CHECKPOINT_DIR, run_name)
+    checkpoint_path = os.path.join(checkpoint_dir, run_name)
 
     enc = encoder.get_encoder(checkpoint_path)
     hparams = model.default_hparams()
@@ -448,6 +451,7 @@ def generate(sess,
 
 def generate_to_file(sess,
                      run_name='run1',
+                     checkpoint_dir='checkpoint',
                      truncate=None,
                      destination_path='gpt_2_gen_texts.txt',
                      sample_delim='=' * 20 + '\n',
@@ -467,21 +471,22 @@ def generate_to_file(sess,
     Adapted from https://github.com/minimaxir/textgenrnn/blob/master/textgenrnn/textgenrnn.py
     """
 
-    generate(sess,
-             run_name,
-             False,
-             truncate,
-             destination_path,
-             sample_delim,
-             prefix,
-             seed,
-             nsamples,
-             batch_size,
-             length,
-             temperature,
-             top_k,
-             top_p,
-             include_prefix)
+    generate(sess=sess,
+             run_name=run_name,
+             checkpoint_dir=checkpoint_dir,
+             return_as_list=False,
+             truncate=truncate,
+             destination_path=destination_path,
+             sample_delim=sample_delim,
+             prefix=prefix,
+             seed=seed,
+             nsamples=nsamples,
+             batch_size=batch_size,
+             length=length,
+             temperature=temperature,
+             top_k=top_k,
+             top_p=top_p,
+             include_prefix=include_prefix)
 
 
 def mount_gdrive():
@@ -552,13 +557,13 @@ def copy_file_from_gdrive(file_path):
     shutil.copyfile("/content/drive/My Drive/" + file_path, file_path)
 
 
-def is_gpt2_downloaded(model_name='117M'):
+def is_gpt2_downloaded(model_dir='models', model_name='117M'):
     """Checks if the original model + associated files are present in folder."""
 
     for filename in ['checkpoint', 'encoder.json', 'hparams.json',
                      'model.ckpt.data-00000-of-00001', 'model.ckpt.index',
                      'model.ckpt.meta', 'vocab.bpe']:
-        if not os.path.isfile(os.path.join("models", model_name, filename)):
+        if not os.path.isfile(os.path.join(model_dir, model_name, filename)):
             return False
     return True
 
@@ -579,7 +584,7 @@ def encode_csv(csv_path, out_path='csv_encoded.txt', header=True,
                 w.write(start_token + row[0] + end_token + "\n")
 
 
-def encode_dataset(file_path, out_path='text_encoded.npz',
+def encode_dataset(file_path, model_dir='models', out_path='text_encoded.npz',
                    model_name="117M",
                    combine=50000):
     """Preencodes a text document into chunks and compresses it,
@@ -588,7 +593,7 @@ def encode_dataset(file_path, out_path='text_encoded.npz',
     Adapted from https://github.com/nshepperd/gpt-2/blob/finetuning/encode.py
     """
 
-    model_path = os.path.join('models', model_name)
+    model_path = os.path.join(model_dir, model_name)
     enc = encoder.get_encoder(model_path)
     print('Reading files')
     chunks = load_dataset(enc, file_path, combine)
@@ -611,8 +616,14 @@ def cmd():
         '--run_name',  help="[finetune/generate] Run number to save/load the model",
         nargs='?', default='run1')
     parser.add_argument(
+        '--checkpoint_dir', help="[finetune] Path of the checkpoint directory",
+        nargs='?', default='checkpoint')
+    parser.add_argument(
         '--model_name',  help="[finetune] Name of the GPT-2 model to finetune",
         nargs='?', default='117M')
+    parser.add_argument(
+        '--model_dir', help="[finetune] Path of directory of the GPT-2 model to finetune",
+        nargs='?', default='models')
     parser.add_argument(
         '--dataset',  help="[finetune] Path to the source text.",
         nargs='?', default=None)
@@ -683,7 +694,9 @@ def cmd():
         assert args.dataset is not None, "You need to provide a dataset."
 
         cmd_finetune(dataset=args.dataset, run_name=args.run_name,
+                     checkpoint_dir=args.checkpoint_dir,
                      model_name=args.model_name,
+                     model_dir=args.model_dir,
                      steps=args.steps, restore_from=args.restore_from,
                      sample_every=args.sample_every,
                      save_every=args.save_every,
@@ -696,20 +709,23 @@ def cmd():
                      prefix=args.prefix, truncate=args.truncate,
                      include_prefix=args.include_prefix,
                      sample_delim=args.sample_delim, run_name=args.run_name,
+                     checkpoint_dir=args.checkpoint_dir,
                      top_k=args.top_k, top_p=args.top_p)
 
 
-def cmd_finetune(dataset, run_name, model_name, steps,
+def cmd_finetune(dataset, run_name, checkpoint_dir, model_name, model_dir, steps,
                  restore_from, sample_every,
                  save_every, print_every, overwrite):
     """Wrapper script for finetuning the model via the CLI."""
 
-    if not is_gpt2_downloaded(model_name=model_name):
-        download_gpt2(model_name=model_name)
+    if not is_gpt2_downloaded(model_dir=model_dir, model_name=model_name):
+        download_gpt2(model_dir=model_dir, model_name=model_name)
 
     sess = start_tf_sess()
     finetune(sess, dataset=dataset, run_name=run_name,
+             checkpoint_dir=checkpoint_dir,
              model_name=model_name,
+             model_dir=model_dir,
              steps=steps, restore_from=restore_from,
              sample_every=sample_every, save_every=save_every,
              print_every=print_every,
@@ -720,6 +736,7 @@ def cmd_generate(nfiles, nsamples, folder,
                  length, temperature, batch_size,
                  prefix, truncate, include_prefix,
                  sample_delim, run_name,
+                 checkpoint_dir,
                  top_k, top_p):
     """Wrapper script for generating text via the CLI.
     The files are generated into a folder, which can be downloaded
@@ -727,7 +744,7 @@ def cmd_generate(nfiles, nsamples, folder,
     """
 
     sess = start_tf_sess()
-    load_gpt2(sess, run_name=run_name)
+    load_gpt2(sess, run_name=run_name, checkpoint_dir=checkpoint_dir)
 
     try:
         os.mkdir(folder)
