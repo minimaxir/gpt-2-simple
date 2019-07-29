@@ -350,6 +350,7 @@ def load_gpt2(sess,
 
     print('Loading checkpoint', ckpt)
     saver.restore(sess, ckpt)
+    return hparams
 
 
 def generate(sess,
@@ -368,7 +369,8 @@ def generate(sess,
              temperature=0.7,
              top_k=0,
              top_p=0.0,
-             include_prefix=True):
+             include_prefix=True,
+             hparams=None):
     """Generates text from a model loaded into memory.
 
     Adapted from https://github.com/openai/gpt-2/blob/master/src/interactive_conditional_samples.py
@@ -387,9 +389,10 @@ def generate(sess,
     checkpoint_path = os.path.join(checkpoint_dir, run_name)
 
     enc = encoder.get_encoder(checkpoint_path)
-    hparams = model.default_hparams()
-    with open(os.path.join(checkpoint_path, 'hparams.json')) as f:
-        hparams.override_from_dict(json.load(f))
+    if hparams is None:
+        hparams = model.default_hparams()
+        with open(os.path.join(checkpoint_path, 'hparams.json')) as f:
+            hparams.override_from_dict(json.load(f))
 
     if prefix:
         context = tf.compat.v1.placeholder(tf.int32, [batch_size, None])
@@ -463,7 +466,8 @@ def generate_to_file(sess,
                      temperature=0.7,
                      top_k=0,
                      top_p=0.0,
-                     include_prefix=True):
+                     include_prefix=True,
+                     hparams=None):
     """Generates the texts to a file.
 
     sample_delim separates texts: set to '' if each text is a small document.
@@ -486,7 +490,8 @@ def generate_to_file(sess,
              temperature=temperature,
              top_k=top_k,
              top_p=top_p,
-             include_prefix=include_prefix)
+             include_prefix=include_prefix,
+             hparams=hparams)
 
 
 def mount_gdrive():
@@ -744,7 +749,7 @@ def cmd_generate(nfiles, nsamples, folder,
     """
 
     sess = start_tf_sess()
-    load_gpt2(sess, run_name=run_name, checkpoint_dir=checkpoint_dir)
+    hparams = load_gpt2(sess, run_name=run_name, checkpoint_dir=checkpoint_dir)
 
     try:
         os.mkdir(folder)
@@ -768,5 +773,6 @@ def cmd_generate(nfiles, nsamples, folder,
                          include_prefix=include_prefix,
                          sample_delim=sample_delim,
                          top_k=top_k,
-                         top_p=top_p
+                         top_p=top_p,
+                         hparams=hparams
                          )
