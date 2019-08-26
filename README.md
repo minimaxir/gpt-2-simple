@@ -65,7 +65,7 @@ print(single_text)
 
 You can pass a `run_name` parameter to `finetune` and `load_gpt2` if you want to store/load multiple models in a `checkpoint` folder.
 
-There is also a command-line interface for both finetining and generation with strong defaults for just running on a Cloud VM w/ GPU. For finetuning (which will also download the model if not present):
+There is also a command-line interface for both finetuning and generation with strong defaults for just running on a Cloud VM w/ GPU. For finetuning (which will also download the model if not present):
 
 ```shell
 gpt_2_simple finetune shakespeare.txt
