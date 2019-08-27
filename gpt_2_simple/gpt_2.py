@@ -36,7 +36,7 @@ def download_file_with_progress(url_base, sub_dir, model_name, file_name):
     file_name : str
         name of file to get e.g. "hparams.json"
     sub_dir: str
-        subdirectory inside which to get and copy locally eg. "models/117M" 
+        subdirectory inside which to get and copy locally eg. "models/124M" 
         no trailing slash
     url_base : str
         Start of URL location specifying server and any base directories no 
@@ -56,7 +56,7 @@ def download_file_with_progress(url_base, sub_dir, model_name, file_name):
                 pbar.update(DOWNLOAD_CHUNK_SIZE)
    
 
-def download_gpt2(model_dir='models', model_name='117M'):
+def download_gpt2(model_dir='models', model_name='124M'):
     """Downloads the GPT-2 model into the current directory
     from Google Cloud Storage.
 
@@ -67,7 +67,7 @@ def download_gpt2(model_dir='models', model_name='117M'):
 
     model_name : str
         name of the GPT-2 model to download. 
-        As of 22 May 2019 one of "117M" or "345M" but may later include other 
+        As of 22 May 2019 one of "124M" or "355M" but may later include other 
         model sizes
 
     Adapted from https://github.com/openai/gpt-2/blob/master/download_model.py
@@ -108,7 +108,7 @@ def start_tf_sess(threads=-1, server=None):
 def finetune(sess,
              dataset,
              steps=-1,
-             model_name='117M',
+             model_name='124M',
              model_dir='models',
              combine=50000,
              batch_size=1,
@@ -161,7 +161,7 @@ def finetune(sess,
         raise ValueError(
             "Can't get samples longer than window size: %s" % hparams.n_ctx)
 
-    if model_name != '117M':
+    if model_name != '124M':
         use_memory_saving_gradients = True
         only_train_transformer_layers = True
         accumulate_gradients = 1
@@ -557,7 +557,7 @@ def copy_file_from_gdrive(file_path):
     shutil.copyfile("/content/drive/My Drive/" + file_path, file_path)
 
 
-def is_gpt2_downloaded(model_dir='models', model_name='117M'):
+def is_gpt2_downloaded(model_dir='models', model_name='124M'):
     """Checks if the original model + associated files are present in folder."""
 
     for filename in ['checkpoint', 'encoder.json', 'hparams.json',
@@ -585,7 +585,7 @@ def encode_csv(csv_path, out_path='csv_encoded.txt', header=True,
 
 
 def encode_dataset(file_path, model_dir='models', out_path='text_encoded.npz',
-                   model_name="117M",
+                   model_name="124M",
                    combine=50000):
     """Preencodes a text document into chunks and compresses it,
     saving time when generated.
@@ -620,7 +620,7 @@ def cmd():
         nargs='?', default='checkpoint')
     parser.add_argument(
         '--model_name',  help="[finetune] Name of the GPT-2 model to finetune",
-        nargs='?', default='117M')
+        nargs='?', default='124M')
     parser.add_argument(
         '--model_dir', help="[finetune] Path of directory of the GPT-2 model to finetune",
         nargs='?', default='models')
