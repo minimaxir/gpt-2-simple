@@ -105,6 +105,17 @@ def start_tf_sess(threads=-1, server=None):
     return tf.compat.v1.Session(config=config)
 
 
+def reset_session(sess, threads=-1, server=None):
+    """Resets the current TensorFlow session, to clear memory
+    or load another model.
+    """
+
+    tf.reset_default_graph()
+    sess.close()
+    sess = start_tf_sess(threads, server)
+    return sess
+
+
 def finetune(sess,
              dataset,
              steps=-1,
