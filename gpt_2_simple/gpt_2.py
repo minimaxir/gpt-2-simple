@@ -110,7 +110,7 @@ def reset_session(sess, threads=-1, server=None):
     or load another model.
     """
 
-    tf.reset_default_graph()
+    tf.compat.v1.reset_default_graph()
     sess.close()
     sess = start_tf_sess(threads, server)
     return sess
