@@ -136,6 +136,7 @@ def finetune(sess,
              max_checkpoints=1,
              use_memory_saving_gradients=False,
              only_train_transformer_layers=False,
+             optimizer='adam',
              overwrite=False):
     """Finetunes the model on the given dataset.
 
@@ -193,18 +194,23 @@ def finetune(sess,
 
     all_vars = [v for v in tf.compat.v1.trainable_variables() if 'model' in v.name]
     train_vars = [v for v in all_vars if '/h' in v.name] if only_train_transformer_layers else all_vars
+
+    if optimizer == 'adam':
+        opt = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
+    elif optimizer == 'sgd':
+        opt = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=learning_rate)
+
     if accumulate_gradients > 1:
         if use_memory_saving_gradients:
             exit("Memory saving gradients are not implemented for gradient accumulation yet.")
         opt = AccumulatingOptimizer(
-            opt=tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate),
+            opt=opt,
             var_list=train_vars)
         opt_reset = opt.reset()
         opt_compute = opt.compute_gradients(loss)
         opt_apply = opt.apply_gradients()
         summary_loss = tf.compat.v1.summary.scalar('loss', opt_apply)
     else:
-        opt = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
         if use_memory_saving_gradients:
             opt_grads = memory_saving_gradients.gradients(loss, train_vars)
         else:
@@ -654,6 +660,9 @@ def cmd():
         '--print_every',  help="[finetune] After how many steps to print progress",
         nargs='?', default=10, type=int)
     parser.add_argument(
+        '--optimizer',  help="[finetune] Optimizer to use for finetuning (adam or sgd)",
+        nargs='?', default='adam')
+    parser.add_argument(
         '--overwrite',  help="[finetune] Overwrite existing model when continuing training",
         nargs='?', default=False, type=lambda x: (str(x).lower() == 'true'))
     parser.add_argument(
@@ -712,6 +721,7 @@ def cmd():
                      sample_every=args.sample_every,
                      save_every=args.save_every,
                      print_every=args.print_every,
+                     optimizer=args.optimizer,
                      overwrite=args.overwrite)
     if args.mode == "generate":
         cmd_generate(nfiles=args.nfiles, nsamples=args.nsamples,
@@ -726,7 +736,7 @@ def cmd():
 
 def cmd_finetune(dataset, run_name, checkpoint_dir, model_name, model_dir, steps,
                  restore_from, sample_every,
-                 save_every, print_every, overwrite):
+                 save_every, print_every, optimizer, overwrite):
     """Wrapper script for finetuning the model via the CLI."""
 
     if not is_gpt2_downloaded(model_dir=model_dir, model_name=model_name):
@@ -740,6 +750,7 @@ def cmd_finetune(dataset, run_name, checkpoint_dir, model_name, model_dir, steps
              steps=steps, restore_from=restore_from,
              sample_every=sample_every, save_every=save_every,
              print_every=print_every,
+             optimizer=optimizer,
              overwrite=overwrite)
 
 
