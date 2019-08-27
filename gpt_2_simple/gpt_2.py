@@ -172,7 +172,7 @@ def finetune(sess,
         raise ValueError(
             "Can't get samples longer than window size: %s" % hparams.n_ctx)
 
-    if model_name != '124M':
+    if model_name not in ['117M', '124M']:
         use_memory_saving_gradients = True
         only_train_transformer_layers = True
         accumulate_gradients = 1
