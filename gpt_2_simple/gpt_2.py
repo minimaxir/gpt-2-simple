@@ -346,12 +346,17 @@ def finetune(sess,
 
 def load_gpt2(sess,
               run_name="run1",
-              checkpoint_dir="checkpoint"):
-    """Loads the model checkpoint into a TensorFlow session
+              checkpoint_dir="checkpoint",
+              model_name=None,
+              model_dir='models'):
+    """Loads the model checkpoint or existing model into a TensorFlow session
     for repeated predictions.
     """
 
-    checkpoint_path = os.path.join(checkpoint_dir, run_name)
+    if model_name:
+        checkpoint_path = os.path.join(model_dir, model_name)
+    else:
+        checkpoint_path = os.path.join(checkpoint_dir, run_name)
 
     hparams = model.default_hparams()
     with open(os.path.join(checkpoint_path, 'hparams.json')) as f:
@@ -364,7 +369,10 @@ def load_gpt2(sess,
     saver = tf.compat.v1.train.Saver(allow_empty=True)
     sess.run(tf.compat.v1.global_variables_initializer())
 
-    print('Loading checkpoint', ckpt)
+    if model_name:
+        print('Loading pretrained model', ckpt)
+    else:
+        print('Loading checkpoint', ckpt)
     saver.restore(sess, ckpt)
 
 
