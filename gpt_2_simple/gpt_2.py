@@ -382,6 +382,8 @@ def load_gpt2(sess,
 def generate(sess,
              run_name='run1',
              checkpoint_dir='checkpoint',
+             model_name=None,
+             model_dir='models',
              sample_dir='samples',
              return_as_list=False,
              truncate=None,
@@ -411,7 +413,10 @@ def generate(sess,
     if prefix == '':
         prefix = None
 
-    checkpoint_path = os.path.join(checkpoint_dir, run_name)
+    if model_name:
+        checkpoint_path = os.path.join(model_dir, model_name)
+    else:
+        checkpoint_path = os.path.join(checkpoint_dir, run_name)
 
     enc = encoder.get_encoder(checkpoint_path)
     hparams = model.default_hparams()
@@ -479,6 +484,8 @@ def generate(sess,
 def generate_to_file(sess,
                      run_name='run1',
                      checkpoint_dir='checkpoint',
+                     model_name=None,
+                     model_dir='models',
                      truncate=None,
                      destination_path='gpt_2_gen_texts.txt',
                      sample_delim='=' * 20 + '\n',
@@ -501,6 +508,8 @@ def generate_to_file(sess,
     generate(sess=sess,
              run_name=run_name,
              checkpoint_dir=checkpoint_dir,
+             model_name=model_name,
+             model_dir=model_dir,
              return_as_list=False,
              truncate=truncate,
              destination_path=destination_path,
