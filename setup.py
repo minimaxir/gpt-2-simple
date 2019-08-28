@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 long_description = '''
-A simple Python package that wraps existing model fine-tuning and generation scripts for OpenAI GPT-2 text generation model (specifically the "small", 117M hyperparameter version). Additionally, this package allows easier generation of text, generating to a file for easy curation, allowing for prefixes to force the text to start with a given phrase.
+A simple Python package that wraps existing model fine-tuning and generation scripts for OpenAI GPT-2 text generation model (specifically the "small", 124M hyperparameter version). Additionally, this package allows easier generation of text, generating to a file for easy curation, allowing for prefixes to force the text to start with a given phrase.
 
 ## Usage
 
@@ -12,7 +12,7 @@ Warning: the pretrained model, and thus any finetuned model, is 500 MB!
 ```python
 import gpt_2_simple as gpt2
 
-gpt2.download_gpt2()   # model is saved into current directory under /models/117M/
+gpt2.download_gpt2()   # model is saved into current directory under /models/124M/
 
 sess = gpt2.start_tf_sess()
 gpt2.finetune(sess, 'shakespeare.txt', steps=1000)   # steps is max number of training steps
@@ -47,7 +47,7 @@ NB: *Restart the Python session first* if you want to finetune on another datase
 setup(
     name='gpt_2_simple',
     packages=['gpt_2_simple'],  # this must be the same as the name above
-    version='0.5.4',
+    version='0.6',
     description="Python package to easily retrain OpenAI's GPT-2 " \
     "text-generating model on new texts.",
     long_description=long_description,
