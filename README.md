@@ -104,15 +104,13 @@ The method GPT-2 uses to generate text is slightly different than those like oth
 * If your input text dataset is massive (>100 MB), you may want to preencode and compress the dataset using `gpt2.encode_dataset(file_path)`. THe output is a compressed `.npz` file which will load much faster into the GPU for finetuning.
 * The 774M "large" model does not currently support finetuning because it will cause modern GPUs to go out-of-memory. However, you can still generate from the default pretrained model using `gpt2.load_gpt2(sess, model_name='774M')` and `gpt2.generate(sess, model_name='774M')`.
 
-## Planned Work
+## Interactive Apps Using gpt-2-simple
 
-Note: this project is intended to have a very tight scope unless demand dictates otherwise.
+* [gpt2-small](https://minimaxir.com/apps/gpt2-small/) — App using the default GPT-2 124M pretrained model
+* [gpt2-reddit](https://minimaxir.com/apps/gpt2-reddit/) — App to generate Reddit titles based on a specified subreddit and/or keyword(s)
+* [gpt2-mtg](https://minimaxir.com/apps/gpt2-mtg/) — App to generate Magic: The Gathering cards
 
-* Allow users to generate texts longer than 1024 tokens. ([GitHub Issue](https://github.com/minimaxir/gpt-2-simple/issues/2))
-* Allow users to use Colaboratory's TPU for finetuning. ([GitHub Issue](https://github.com/minimaxir/gpt-2-simple/issues/3))
-* For Colaboratory, allow model to automatically save checkpoints to Google Drive during training to prevent timeouts.
-
-## Examples Using gpt-2-simple
+## Text Generation Examples Using gpt-2-simple
 
 * [ResetEra](https://www.resetera.com/threads/i-trained-an-ai-on-thousands-of-resetera-thread-conversations-and-it-created-hot-gaming-shitposts.112167/) — Generated video game forum discussions ([GitHub w/ dumps](https://github.com/minimaxir/resetera-gpt-2))
 * [/r/legaladvice](https://www.reddit.com/r/legaladviceofftopic/comments/bfqf22/i_trained_a_moreadvanced_ai_on_rlegaladvice/) — Title generation ([GitHub w/ dumps](https://github.com/minimaxir/legaladvice-gpt2))
