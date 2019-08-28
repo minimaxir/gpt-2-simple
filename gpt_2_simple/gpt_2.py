@@ -156,13 +156,12 @@ def finetune(sess,
     maketree(checkpoint_path)
     files = [f for f in os.listdir(checkpoint_path)]
     for file in ['hparams.json', 'encoder.json', 'vocab.bpe']:
-        if file not in files:
-            try:
-                shutil.copyfile(os.path.join(model_dir, model_name, file),
-                                os.path.join(checkpoint_path, file))
-            except FileNotFoundError as fnf_error:
-                print("You need to download the GPT-2 model first via download_gpt2()")
-                raise(fnf_error)
+        try:
+            shutil.copyfile(os.path.join(model_dir, model_name, file),
+                            os.path.join(checkpoint_path, file))
+        except FileNotFoundError as fnf_error:
+            print("You need to download the GPT-2 model first via download_gpt2()")
+            raise(fnf_error)
 
     enc = encoder.get_encoder(checkpoint_path)
     hparams = model.default_hparams()
