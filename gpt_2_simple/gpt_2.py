@@ -377,6 +377,8 @@ def load_gpt2(sess,
         hparams.override_from_dict(json.load(f))
 
     context = tf.compat.v1.placeholder(tf.int32, [1, None])
+
+    gpus = []
     if multi_gpu:
         gpus = get_available_gpus()
 
