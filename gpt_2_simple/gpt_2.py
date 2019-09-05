@@ -9,6 +9,7 @@ from tqdm import tqdm, trange
 import numpy as np
 import tensorflow as tf
 from tensorflow.core.protobuf import rewriter_config_pb2
+from tensorflow.python.client import device_lib
 import time
 from datetime import datetime
 import csv
@@ -115,6 +116,9 @@ def reset_session(sess, threads=-1, server=None):
     sess = start_tf_sess(threads, server)
     return sess
 
+def get_available_gpus():
+    local_device_protos = device_lib.list_local_devices()
+    return [x.name for x in local_device_protos if x.device_type == 'GPU']
 
 def finetune(sess,
              dataset,
@@ -131,6 +135,7 @@ def finetune(sess,
              sample_every=100,
              sample_length=1023,
              sample_num=1,
+             multi_gpu=False,
              save_every=1000,
              print_every=1,
              max_checkpoints=1,
@@ -144,7 +149,7 @@ def finetune(sess,
     See that file for parameter definitions.
     """
 
-    assert model_name not in ['774M', '1558M'], "Currently, modern GPUs cannot finetune the 774M GPT-2 model or larger."
+    #assert model_name not in ['774M', '1558M'], "Currently, modern GPUs cannot finetune the 774M GPT-2 model or larger."
 
     SAMPLE_DIR = 'samples'
 
@@ -181,7 +186,12 @@ def finetune(sess,
         accumulate_gradients = 1
 
     context = tf.compat.v1.placeholder(tf.int32, [batch_size, None])
-    output = model.model(hparams=hparams, X=context)
+    gpus = []
+
+    if multi_gpu:
+        gpus = get_available_gpus()
+
+    output = model.model(hparams=hparams, X=context, gpus=gpus)
     loss = tf.reduce_mean(
         input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
             labels=context[:, 1:], logits=output['logits'][:, :-1]))
@@ -351,7 +361,8 @@ def load_gpt2(sess,
               run_name="run1",
               checkpoint_dir="checkpoint",
               model_name=None,
-              model_dir='models'):
+              model_dir='models',
+              multi_gpu=False):
     """Loads the model checkpoint or existing model into a TensorFlow session
     for repeated predictions.
     """
@@ -366,7 +377,10 @@ def load_gpt2(sess,
         hparams.override_from_dict(json.load(f))
 
     context = tf.compat.v1.placeholder(tf.int32, [1, None])
-    output = model.model(hparams=hparams, X=context)
+    if multi_gpu:
+        gpus = get_available_gpus()
+
+    output = model.model(hparams=hparams, X=context, gpus=gpus)
 
     ckpt = tf.train.latest_checkpoint(checkpoint_path)
     saver = tf.compat.v1.train.Saver(allow_empty=True)
