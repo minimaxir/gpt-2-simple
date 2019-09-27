@@ -36,7 +36,7 @@ def download_file_with_progress(url_base, sub_dir, model_name, file_name):
     file_name : str
         name of file to get e.g. "hparams.json"
     sub_dir: str
-        subdirectory inside which to get and copy locally eg. "models/117M" 
+        subdirectory inside which to get and copy locally eg. "models/124M" 
         no trailing slash
     url_base : str
         Start of URL location specifying server and any base directories no 
@@ -56,7 +56,7 @@ def download_file_with_progress(url_base, sub_dir, model_name, file_name):
                 pbar.update(DOWNLOAD_CHUNK_SIZE)
    
 
-def download_gpt2(model_dir='models', model_name='117M'):
+def download_gpt2(model_dir='models', model_name='124M'):
     """Downloads the GPT-2 model into the current directory
     from Google Cloud Storage.
 
@@ -67,7 +67,7 @@ def download_gpt2(model_dir='models', model_name='117M'):
 
     model_name : str
         name of the GPT-2 model to download. 
-        As of 22 May 2019 one of "117M" or "345M" but may later include other 
+        As of 22 May 2019 one of "124M" or "355M" but may later include other 
         model sizes
 
     Adapted from https://github.com/openai/gpt-2/blob/master/download_model.py
@@ -105,10 +105,21 @@ def start_tf_sess(threads=-1, server=None):
     return tf.compat.v1.Session(config=config)
 
 
+def reset_session(sess, threads=-1, server=None):
+    """Resets the current TensorFlow session, to clear memory
+    or load another model.
+    """
+
+    tf.compat.v1.reset_default_graph()
+    sess.close()
+    sess = start_tf_sess(threads, server)
+    return sess
+
+
 def finetune(sess,
              dataset,
              steps=-1,
-             model_name='117M',
+             model_name='124M',
              model_dir='models',
              combine=50000,
              batch_size=1,
@@ -125,12 +136,16 @@ def finetune(sess,
              max_checkpoints=1,
              use_memory_saving_gradients=False,
              only_train_transformer_layers=False,
+             optimizer='adam',
              overwrite=False):
     """Finetunes the model on the given dataset.
 
     Adapted from https://github.com/nshepperd/gpt-2/blob/finetuning/train.py.
     See that file for parameter definitions.
     """
+
+    assert model_name not in ['774M', '1558M'], "Currently, modern GPUs cannot finetune the 774M GPT-2 model or larger."
+
     SAMPLE_DIR = 'samples'
 
     checkpoint_path = os.path.join(checkpoint_dir, run_name)
@@ -144,13 +159,12 @@ def finetune(sess,
     maketree(checkpoint_path)
     files = [f for f in os.listdir(checkpoint_path)]
     for file in ['hparams.json', 'encoder.json', 'vocab.bpe']:
-        if file not in files:
-            try:
-                shutil.copyfile(os.path.join(model_dir, model_name, file),
-                                os.path.join(checkpoint_path, file))
-            except FileNotFoundError as fnf_error:
-                print("You need to download the GPT-2 model first via download_gpt2()")
-                raise(fnf_error)
+        try:
+            shutil.copyfile(os.path.join(model_dir, model_name, file),
+                            os.path.join(checkpoint_path, file))
+        except FileNotFoundError as fnf_error:
+            print("You need to download the GPT-2 model first via download_gpt2()")
+            raise(fnf_error)
 
     enc = encoder.get_encoder(checkpoint_path)
     hparams = model.default_hparams()
@@ -161,7 +175,7 @@ def finetune(sess,
         raise ValueError(
             "Can't get samples longer than window size: %s" % hparams.n_ctx)
 
-    if model_name != '117M':
+    if model_name not in ['117M', '124M']:
         use_memory_saving_gradients = True
         only_train_transformer_layers = True
         accumulate_gradients = 1
@@ -182,18 +196,23 @@ def finetune(sess,
 
     all_vars = [v for v in tf.compat.v1.trainable_variables() if 'model' in v.name]
     train_vars = [v for v in all_vars if '/h' in v.name] if only_train_transformer_layers else all_vars
+
+    if optimizer == 'adam':
+        opt = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
+    elif optimizer == 'sgd':
+        opt = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=learning_rate)
+
     if accumulate_gradients > 1:
         if use_memory_saving_gradients:
             exit("Memory saving gradients are not implemented for gradient accumulation yet.")
         opt = AccumulatingOptimizer(
-            opt=tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate),
+            opt=opt,
             var_list=train_vars)
         opt_reset = opt.reset()
         opt_compute = opt.compute_gradients(loss)
         opt_apply = opt.apply_gradients()
         summary_loss = tf.compat.v1.summary.scalar('loss', opt_apply)
     else:
-        opt = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
         if use_memory_saving_gradients:
             opt_grads = memory_saving_gradients.gradients(loss, train_vars)
         else:
@@ -330,12 +349,17 @@ def finetune(sess,
 
 def load_gpt2(sess,
               run_name="run1",
-              checkpoint_dir="checkpoint"):
-    """Loads the model checkpoint into a TensorFlow session
+              checkpoint_dir="checkpoint",
+              model_name=None,
+              model_dir='models'):
+    """Loads the model checkpoint or existing model into a TensorFlow session
     for repeated predictions.
     """
 
-    checkpoint_path = os.path.join(checkpoint_dir, run_name)
+    if model_name:
+        checkpoint_path = os.path.join(model_dir, model_name)
+    else:
+        checkpoint_path = os.path.join(checkpoint_dir, run_name)
 
     hparams = model.default_hparams()
     with open(os.path.join(checkpoint_path, 'hparams.json')) as f:
@@ -348,13 +372,18 @@ def load_gpt2(sess,
     saver = tf.compat.v1.train.Saver(allow_empty=True)
     sess.run(tf.compat.v1.global_variables_initializer())
 
-    print('Loading checkpoint', ckpt)
+    if model_name:
+        print('Loading pretrained model', ckpt)
+    else:
+        print('Loading checkpoint', ckpt)
     saver.restore(sess, ckpt)
 
 
 def generate(sess,
              run_name='run1',
              checkpoint_dir='checkpoint',
+             model_name=None,
+             model_dir='models',
              sample_dir='samples',
              return_as_list=False,
              truncate=None,
@@ -384,7 +413,10 @@ def generate(sess,
     if prefix == '':
         prefix = None
 
-    checkpoint_path = os.path.join(checkpoint_dir, run_name)
+    if model_name:
+        checkpoint_path = os.path.join(model_dir, model_name)
+    else:
+        checkpoint_path = os.path.join(checkpoint_dir, run_name)
 
     enc = encoder.get_encoder(checkpoint_path)
     hparams = model.default_hparams()
@@ -452,6 +484,8 @@ def generate(sess,
 def generate_to_file(sess,
                      run_name='run1',
                      checkpoint_dir='checkpoint',
+                     model_name=None,
+                     model_dir='models',
                      truncate=None,
                      destination_path='gpt_2_gen_texts.txt',
                      sample_delim='=' * 20 + '\n',
@@ -474,6 +508,8 @@ def generate_to_file(sess,
     generate(sess=sess,
              run_name=run_name,
              checkpoint_dir=checkpoint_dir,
+             model_name=model_name,
+             model_dir=model_dir,
              return_as_list=False,
              truncate=truncate,
              destination_path=destination_path,
@@ -557,7 +593,7 @@ def copy_file_from_gdrive(file_path):
     shutil.copyfile("/content/drive/My Drive/" + file_path, file_path)
 
 
-def is_gpt2_downloaded(model_dir='models', model_name='117M'):
+def is_gpt2_downloaded(model_dir='models', model_name='124M'):
     """Checks if the original model + associated files are present in folder."""
 
     for filename in ['checkpoint', 'encoder.json', 'hparams.json',
@@ -585,7 +621,7 @@ def encode_csv(csv_path, out_path='csv_encoded.txt', header=True,
 
 
 def encode_dataset(file_path, model_dir='models', out_path='text_encoded.npz',
-                   model_name="117M",
+                   model_name="124M",
                    combine=50000):
     """Preencodes a text document into chunks and compresses it,
     saving time when generated.
@@ -620,7 +656,7 @@ def cmd():
         nargs='?', default='checkpoint')
     parser.add_argument(
         '--model_name',  help="[finetune] Name of the GPT-2 model to finetune",
-        nargs='?', default='117M')
+        nargs='?', default='124M')
     parser.add_argument(
         '--model_dir', help="[finetune] Path of directory of the GPT-2 model to finetune",
         nargs='?', default='models')
@@ -642,6 +678,9 @@ def cmd():
     parser.add_argument(
         '--print_every',  help="[finetune] After how many steps to print progress",
         nargs='?', default=10, type=int)
+    parser.add_argument(
+        '--optimizer',  help="[finetune] Optimizer to use for finetuning (adam or sgd)",
+        nargs='?', default='adam')
     parser.add_argument(
         '--overwrite',  help="[finetune] Overwrite existing model when continuing training",
         nargs='?', default=False, type=lambda x: (str(x).lower() == 'true'))
@@ -701,6 +740,7 @@ def cmd():
                      sample_every=args.sample_every,
                      save_every=args.save_every,
                      print_every=args.print_every,
+                     optimizer=args.optimizer,
                      overwrite=args.overwrite)
     if args.mode == "generate":
         cmd_generate(nfiles=args.nfiles, nsamples=args.nsamples,
@@ -715,7 +755,7 @@ def cmd():
 
 def cmd_finetune(dataset, run_name, checkpoint_dir, model_name, model_dir, steps,
                  restore_from, sample_every,
-                 save_every, print_every, overwrite):
+                 save_every, print_every, optimizer, overwrite):
     """Wrapper script for finetuning the model via the CLI."""
 
     if not is_gpt2_downloaded(model_dir=model_dir, model_name=model_name):
@@ -729,6 +769,7 @@ def cmd_finetune(dataset, run_name, checkpoint_dir, model_name, model_dir, steps
              steps=steps, restore_from=restore_from,
              sample_every=sample_every, save_every=save_every,
              print_every=print_every,
+             optimizer=optimizer,
              overwrite=overwrite)
 
 
