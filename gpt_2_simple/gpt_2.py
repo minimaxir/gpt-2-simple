@@ -739,7 +739,7 @@ def cmd():
         nargs='?', default='=' * 20 + '\n', type=str)
     parser.add_argument(
         '--multi_gpu',  help="[generate/finetune] Attempt to allocate multiple GPUs for running.",
-        nargs='?', default='=' * 20 + '\n', type=str)
+        nargs='?', default='=' * 20 + '\n', type=bool)
 
     # Positional arguments
     parser.add_argument('mode', nargs='?')
@@ -761,7 +761,7 @@ def cmd():
                      print_every=args.print_every,
                      optimizer=args.optimizer,
                      overwrite=args.overwrite,
-                     multi_gpu=multi_gpu)
+                     multi_gpu=args.multi_gpu)
     if args.mode == "generate":
         cmd_generate(nfiles=args.nfiles, nsamples=args.nsamples,
                      folder=args.folder, length=args.length,
@@ -770,7 +770,7 @@ def cmd():
                      include_prefix=args.include_prefix,
                      sample_delim=args.sample_delim, run_name=args.run_name,
                      checkpoint_dir=args.checkpoint_dir,
-                     top_k=args.top_k, top_p=args.top_p, multi_gpu=multi_gpu)
+                     top_k=args.top_k, top_p=args.top_p, multi_gpu=args.multi_gpu)
 
 
 def cmd_finetune(dataset, run_name, checkpoint_dir, model_name, model_dir, steps,
