@@ -149,7 +149,7 @@ def finetune(sess,
     See that file for parameter definitions.
     """
 
-    #assert model_name not in ['774M', '1558M'], "Currently, modern GPUs cannot finetune the 774M GPT-2 model or larger."
+    assert model_name not in ['774M', '1558M'] and not multi_gpu, "Currently, a modern single GPU cannot finetune the 774M GPT-2 model or larger."
 
     SAMPLE_DIR = 'samples'
 
@@ -737,6 +737,9 @@ def cmd():
     parser.add_argument(
         '--sample_delim',  help="[generate] Delimiter between each generated sample.",
         nargs='?', default='=' * 20 + '\n', type=str)
+    parser.add_argument(
+        '--multi_gpu',  help="[generate/finetune] Attempt to allocate multiple GPUs for running.",
+        nargs='?', default='=' * 20 + '\n', type=str)
 
     # Positional arguments
     parser.add_argument('mode', nargs='?')
@@ -757,7 +760,8 @@ def cmd():
                      save_every=args.save_every,
                      print_every=args.print_every,
                      optimizer=args.optimizer,
-                     overwrite=args.overwrite)
+                     overwrite=args.overwrite,
+                     multi_gpu=multi_gpu)
     if args.mode == "generate":
         cmd_generate(nfiles=args.nfiles, nsamples=args.nsamples,
                      folder=args.folder, length=args.length,
@@ -766,12 +770,12 @@ def cmd():
                      include_prefix=args.include_prefix,
                      sample_delim=args.sample_delim, run_name=args.run_name,
                      checkpoint_dir=args.checkpoint_dir,
-                     top_k=args.top_k, top_p=args.top_p)
+                     top_k=args.top_k, top_p=args.top_p, multi_gpu=multi_gpu)
 
 
 def cmd_finetune(dataset, run_name, checkpoint_dir, model_name, model_dir, steps,
                  restore_from, sample_every,
-                 save_every, print_every, optimizer, overwrite):
+                 save_every, print_every, optimizer, overwrite, multi_gpu):
     """Wrapper script for finetuning the model via the CLI."""
 
     if not is_gpt2_downloaded(model_dir=model_dir, model_name=model_name):
@@ -786,7 +790,8 @@ def cmd_finetune(dataset, run_name, checkpoint_dir, model_name, model_dir, steps
              sample_every=sample_every, save_every=save_every,
              print_every=print_every,
              optimizer=optimizer,
-             overwrite=overwrite)
+             overwrite=overwrite,
+             multi_gpu=multi_gpu)
 
 
 def cmd_generate(nfiles, nsamples, folder,
@@ -794,14 +799,14 @@ def cmd_generate(nfiles, nsamples, folder,
                  prefix, truncate, include_prefix,
                  sample_delim, run_name,
                  checkpoint_dir,
-                 top_k, top_p):
+                 top_k, top_p, multi_gpu):
     """Wrapper script for generating text via the CLI.
     The files are generated into a folder, which can be downloaded
     recursively by downloading the entire folder.
     """
 
     sess = start_tf_sess()
-    load_gpt2(sess, run_name=run_name, checkpoint_dir=checkpoint_dir)
+    load_gpt2(sess, run_name=run_name, checkpoint_dir=checkpoint_dir, multi_gpu=multi_gpu)
 
     try:
         os.mkdir(folder)
