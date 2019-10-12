@@ -149,7 +149,7 @@ def finetune(sess,
     See that file for parameter definitions.
     """
 
-    assert model_name not in ['774M', '1558M'] and not multi_gpu, "Currently, a modern single GPU cannot finetune the 774M GPT-2 model or larger."
+    assert model_name not in ['774M', '1558M'] or multi_gpu, "Currently, a modern single GPU cannot finetune the 774M GPT-2 model or larger."
 
     SAMPLE_DIR = 'samples'
 
