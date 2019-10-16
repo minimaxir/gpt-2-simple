@@ -739,7 +739,7 @@ def cmd():
         nargs='?', default='=' * 20 + '\n', type=str)
     parser.add_argument(
         '--multi_gpu',  help="[generate/finetune] Attempt to allocate multiple GPUs for running.",
-        nargs='?', default='=' * 20 + '\n', type=bool)
+        nargs='?', default=True, type=lambda x: (str(x).lower() == 'true'))
 
     # Positional arguments
     parser.add_argument('mode', nargs='?')
