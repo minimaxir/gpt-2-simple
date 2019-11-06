@@ -799,6 +799,7 @@ def cmd_generate(nfiles, nsamples, folder,
 
         generate_to_file(sess,
                          run_name=run_name,
+                         checkpoint_dir=checkpoint_dir,
                          destination_path=gen_file,
                          length=length,
                          temperature=temperature,
