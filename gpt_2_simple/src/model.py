@@ -174,7 +174,7 @@ def positions_for(tokens, past_length):
     return expand_tile(past_length + tf.range(nsteps), batch_size)
 
 
-def model(hparams, X, past=None, scope='model', reuse=False):
+def model(hparams, X, past=None, scope='model', gpus=[], reuse=False):
     with tf.compat.v1.variable_scope(scope, reuse=reuse):
         results = {}
         batch, sequence = shape_list(X)
@@ -190,11 +190,20 @@ def model(hparams, X, past=None, scope='model', reuse=False):
         presents = []
         pasts = tf.unstack(past, axis=1) if past is not None else [None] * hparams.n_layer
         assert len(pasts) == hparams.n_layer
+        gpu_stack = np.floor(hparams.n_layer/len(gpus)) if len(gpus) > 0 else 0
+        d = 0
         for layer, past in enumerate(pasts):
-            h, present = block(h, 'h%d' % layer, past=past, hparams=hparams)
-            if layer == 10:
+            if gpu_stack < 1:
+                h, present = block(h, 'h%d' % layer, past=past, hparams=hparams)
                 tf.compat.v1.add_to_collection('checkpoints', h)
-            presents.append(present)
+                presents.append(present)
+            else:
+                if layer != 0 and layer % gpu_stack == 0 and d+1 != len(gpus):
+                    d += 1
+                with tf.device(gpus[d]):
+                    h, present = block(h, 'h%d' % layer, past=past, hparams=hparams)
+                    tf.compat.v1.add_to_collection('checkpoints', h)
+                    presents.append(present)
         results['present'] = tf.stack(presents, axis=1)
         h = norm(h, 'ln_f')
 

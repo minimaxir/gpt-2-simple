@@ -9,6 +9,7 @@ from tqdm import tqdm, trange
 import numpy as np
 import tensorflow as tf
 from tensorflow.core.protobuf import rewriter_config_pb2
+from tensorflow.python.client import device_lib
 import time
 from datetime import datetime
 import csv
@@ -115,6 +116,9 @@ def reset_session(sess, threads=-1, server=None):
     sess = start_tf_sess(threads, server)
     return sess
 
+def get_available_gpus():
+    local_device_protos = device_lib.list_local_devices()
+    return [x.name for x in local_device_protos if x.device_type == 'GPU']
 
 def finetune(sess,
              dataset,
@@ -131,6 +135,7 @@ def finetune(sess,
              sample_every=100,
              sample_length=1023,
              sample_num=1,
+             multi_gpu=False,
              save_every=1000,
              print_every=1,
              max_checkpoints=1,
@@ -144,7 +149,7 @@ def finetune(sess,
     See that file for parameter definitions.
     """
 
-    assert model_name not in ['774M', '1558M'], "Currently, modern GPUs cannot finetune the 774M GPT-2 model or larger."
+    assert model_name not in ['774M', '1558M'] or multi_gpu, "Currently, a modern single GPU cannot finetune the 774M GPT-2 model or larger."
 
     SAMPLE_DIR = 'samples'
 
@@ -181,7 +186,12 @@ def finetune(sess,
         accumulate_gradients = 1
 
     context = tf.compat.v1.placeholder(tf.int32, [batch_size, None])
-    output = model.model(hparams=hparams, X=context)
+    gpus = []
+
+    if multi_gpu:
+        gpus = get_available_gpus()
+
+    output = model.model(hparams=hparams, X=context, gpus=gpus)
     loss = tf.reduce_mean(
         input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
             labels=context[:, 1:], logits=output['logits'][:, :-1]))
@@ -351,7 +361,8 @@ def load_gpt2(sess,
               run_name="run1",
               checkpoint_dir="checkpoint",
               model_name=None,
-              model_dir='models'):
+              model_dir='models',
+              multi_gpu=False):
     """Loads the model checkpoint or existing model into a TensorFlow session
     for repeated predictions.
     """
@@ -366,7 +377,12 @@ def load_gpt2(sess,
         hparams.override_from_dict(json.load(f))
 
     context = tf.compat.v1.placeholder(tf.int32, [1, None])
-    output = model.model(hparams=hparams, X=context)
+
+    gpus = []
+    if multi_gpu:
+        gpus = get_available_gpus()
+
+    output = model.model(hparams=hparams, X=context, gpus=gpus)
 
     ckpt = tf.train.latest_checkpoint(checkpoint_path)
     saver = tf.compat.v1.train.Saver(allow_empty=True)
@@ -721,6 +737,9 @@ def cmd():
     parser.add_argument(
         '--sample_delim',  help="[generate] Delimiter between each generated sample.",
         nargs='?', default='=' * 20 + '\n', type=str)
+    parser.add_argument(
+        '--multi_gpu',  help="[generate/finetune] Attempt to allocate multiple GPUs for running.",
+        nargs='?', default=True, type=lambda x: (str(x).lower() == 'true'))
 
     # Positional arguments
     parser.add_argument('mode', nargs='?')
@@ -741,7 +760,8 @@ def cmd():
                      save_every=args.save_every,
                      print_every=args.print_every,
                      optimizer=args.optimizer,
-                     overwrite=args.overwrite)
+                     overwrite=args.overwrite,
+                     multi_gpu=args.multi_gpu)
     if args.mode == "generate":
         cmd_generate(nfiles=args.nfiles, nsamples=args.nsamples,
                      folder=args.folder, length=args.length,
@@ -750,12 +770,12 @@ def cmd():
                      include_prefix=args.include_prefix,
                      sample_delim=args.sample_delim, run_name=args.run_name,
                      checkpoint_dir=args.checkpoint_dir,
-                     top_k=args.top_k, top_p=args.top_p)
+                     top_k=args.top_k, top_p=args.top_p, multi_gpu=args.multi_gpu)
 
 
 def cmd_finetune(dataset, run_name, checkpoint_dir, model_name, model_dir, steps,
                  restore_from, sample_every,
-                 save_every, print_every, optimizer, overwrite):
+                 save_every, print_every, optimizer, overwrite, multi_gpu):
     """Wrapper script for finetuning the model via the CLI."""
 
     if not is_gpt2_downloaded(model_dir=model_dir, model_name=model_name):
@@ -770,7 +790,8 @@ def cmd_finetune(dataset, run_name, checkpoint_dir, model_name, model_dir, steps
              sample_every=sample_every, save_every=save_every,
              print_every=print_every,
              optimizer=optimizer,
-             overwrite=overwrite)
+             overwrite=overwrite,
+             multi_gpu=multi_gpu)
 
 
 def cmd_generate(nfiles, nsamples, folder,
@@ -778,14 +799,14 @@ def cmd_generate(nfiles, nsamples, folder,
                  prefix, truncate, include_prefix,
                  sample_delim, run_name,
                  checkpoint_dir,
-                 top_k, top_p):
+                 top_k, top_p, multi_gpu):
     """Wrapper script for generating text via the CLI.
     The files are generated into a folder, which can be downloaded
     recursively by downloading the entire folder.
     """
 
     sess = start_tf_sess()
-    load_gpt2(sess, run_name=run_name, checkpoint_dir=checkpoint_dir)
+    load_gpt2(sess, run_name=run_name, checkpoint_dir=checkpoint_dir, multi_gpu=multi_gpu)
 
     try:
         os.mkdir(folder)
