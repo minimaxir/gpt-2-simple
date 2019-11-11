@@ -38,7 +38,7 @@ import requests
 model_name = "124M"
 if not os.path.isdir(os.path.join("models", model_name)):
 	print(f"Downloading {model_name} model...")
-	gpt2.download_gpt2(model_name=model_name)   # model is saved into current directory under /models/117M/
+	gpt2.download_gpt2(model_name=model_name)   # model is saved into current directory under /models/124M/
 
 
 file_name = "shakespeare.txt"
@@ -117,6 +117,7 @@ The method GPT-2 uses to generate text is slightly different than those like oth
 * If you have a partially-trained GPT-2 model and want to continue finetuning it, you can set `overwrite=True` to finetune, which will continue training and remove the previous iteration of the model without creating a duplicate copy. This can be especially useful for transfer learning (e.g. heavily finetune GPT-2 on one dataset, then finetune on other dataset to get a "merging" of both datasets).
 * If your input text dataset is massive (>100 MB), you may want to preencode and compress the dataset using `gpt2.encode_dataset(file_path)`. THe output is a compressed `.npz` file which will load much faster into the GPU for finetuning.
 * The 774M "large" model does not currently support finetuning because it will cause modern GPUs to go out-of-memory. However, you can still generate from the default pretrained model using `gpt2.load_gpt2(sess, model_name='774M')` and `gpt2.generate(sess, model_name='774M')`.
+* The 1558M "extra large", true model, may not work out-of-the-box with the GPU included with the Colaboratory Notebook. More testing is needed to identify optimial configurations for it.
 
 ## Interactive Apps Using gpt-2-simple
 
