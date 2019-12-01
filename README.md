@@ -22,7 +22,7 @@ gpt-2-simple can be installed [via PyPI](https://pypi.org/project/gpt_2_simple/)
 pip3 install gpt-2-simple
 ```
 
-You will also need to install the corresponding TensorFlow for your system (e.g. `tensorflow` or `tensorflow-gpu`). **TensorFlow 2.0 is currently not supported**, so TensorFlow 1.14 is recommended.
+You will also need to install the corresponding TensorFlow for your system (e.g. `tensorflow` or `tensorflow-gpu`). **TensorFlow 2.0 is currently not supported** and the package will throw an assertion if loaded, so TensorFlow 1.14/1.15 is recommended.
 
 ## Usage
 
