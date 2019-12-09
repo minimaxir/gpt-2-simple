@@ -235,7 +235,7 @@ def finetune(sess,
         opt_apply = opt.apply_gradients(opt_grads)
         summary_loss = tf.compat.v1.summary.scalar('loss', loss)
 
-    summary_log = tf.compat.v1.summary.FileWriter(checkpoint_path)
+    summary_log = tf.compat.v1.summary.FileWriter(checkpoint_path, sess.graph)
 
     saver = tf.compat.v1.train.Saver(
         var_list=all_vars,
