@@ -158,6 +158,7 @@ def finetune(sess,
     SAMPLE_DIR = 'samples'
 
     checkpoint_path = os.path.join(checkpoint_dir, run_name)
+    
 
     def maketree(path):
         try:
@@ -216,6 +217,7 @@ def finetune(sess,
     elif optimizer == 'sgd':
         opt = tf.compat.v1.train.GradientDescentOptimizer(learning_rate=learning_rate)
 
+
     if accumulate_gradients > 1:
         if use_memory_saving_gradients:
             exit("Memory saving gradients are not implemented for gradient accumulation yet.")
@@ -226,16 +228,24 @@ def finetune(sess,
         opt_compute = opt.compute_gradients(loss)
         opt_apply = opt.apply_gradients()
         summary_loss = tf.compat.v1.summary.scalar('loss', opt_apply)
+
+        #summary_lr = tf.compat.v1.summary.scalar('learning_rate', lr)
+        #summaries = tf.summary.merge([summary_lr, summary_loss])
     else:
         if use_memory_saving_gradients:
             opt_grads = memory_saving_gradients.gradients(loss, train_vars)
         else:
             opt_grads = tf.gradients(ys=loss, xs=train_vars)
+        
+
         opt_grads = list(zip(opt_grads, train_vars))
         opt_apply = opt.apply_gradients(opt_grads)
         summary_loss = tf.compat.v1.summary.scalar('loss', loss)
 
-    summary_log = tf.compat.v1.summary.FileWriter(checkpoint_path, sess.graph)
+
+    summaries = [summary_loss]
+    summary_op = tf.summary.merge(summaries)
+    summary_writer = tf.compat.v1.summary.FileWriter(checkpoint_path, sess.graph)
 
     saver = tf.compat.v1.train.Saver(
         var_list=all_vars,
@@ -284,7 +294,7 @@ def finetune(sess,
         with open(counter_path, 'w') as fp:
             fp.write(str(counter-1) + '\n')
 
-    def generate_samples():
+    def generate_samples(header=True):
         context_tokens = data_sampler.sample(1)
         all_text = []
         index = 0
@@ -294,8 +304,9 @@ def finetune(sess,
                 feed_dict={context: batch_size * [context_tokens]})
             for i in range(min(sample_num - index, batch_size)):
                 text = enc.decode(out[i])
-                text = '======== SAMPLE {} ========\n{}\n'.format(
-                    index + 1, text)
+                if header:
+                    text = '======== SAMPLE {} ========\n{}\n'.format(
+                        index + 1, text)
                 all_text.append(text)
                 index += 1
         print(text)
@@ -304,6 +315,8 @@ def finetune(sess,
                 os.path.join(SAMPLE_DIR, run_name,
                              'samples-{}').format(counter), 'w') as fp:
             fp.write('\n'.join(all_text))
+
+        return text
 
     def sample_batch():
         return [data_sampler.sample(1024) for _ in range(batch_size)]
@@ -317,6 +330,7 @@ def finetune(sess,
     avg_loss = (0.0, 0.0)
     start_time = time.time()
 
+    best_loss = 1000.00
     if steps:
         steps = int(steps)
     
@@ -328,21 +342,30 @@ def finetune(sess,
             if (counter - 1) % save_every == 0 and counter > 1:
                 save()
             if (counter - 1) % sample_every == 0 and counter > 1:
-                generate_samples()
+                sample_text = generate_samples(False)
+                summary_sample = tf.compat.v1.summary.text('generated_sample', tf.convert_to_tensor(sample_text))
+                text = sess.run(summary_sample)
+                summary_writer.add_summary(text, counter)
 
             if accumulate_gradients > 1:
                 sess.run(opt_reset)
                 for _ in range(accumulate_gradients):
                     sess.run(
                         opt_compute, feed_dict={context: sample_batch()})
-                (v_loss, v_summary) = sess.run((opt_apply, summary_loss))
+                (v_loss, v_summary) = sess.run((opt_apply, summary_op))
             else:
                 (_, v_loss, v_summary) = sess.run(
-                    (opt_apply, loss, summary_loss),
+                    (opt_apply, loss, summary_op),
                     feed_dict={context: sample_batch()})
 
-            summary_log.add_summary(v_summary, counter)
-
+            if v_loss < best_loss:
+                loss_sample_text = generate_samples()
+                summary_loss_sample = tf.compat.v1.summary.text('best_loss_sample', tf.convert_to_tensor(loss_sample_text))
+                loss_text = sess.run(summary_loss_sample)
+                summary_writer.add_summary(loss_text, loss)
+                        
+            summary_writer.add_summary(v_summary, counter)
+          
             if counter % print_every == 0:
                 avg_loss = (avg_loss[0] * 0.99 + v_loss,
                             avg_loss[1] * 0.99 + 1.0)
@@ -525,7 +548,7 @@ def generate_to_file(sess,
     Adapted from https://github.com/minimaxir/textgenrnn/blob/master/textgenrnn/textgenrnn.py
     """
 
-    generate(sess=sess,
+    enerate(sess=sess,
              run_name=run_name,
              checkpoint_dir=checkpoint_dir,
              model_name=model_name,
