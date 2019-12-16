@@ -14,7 +14,7 @@ import time
 from datetime import datetime
 import csv
 import argparse
-
+import urllib.request
 
 # if in Google Colaboratory
 try:
@@ -753,7 +753,7 @@ def cmd():
     parser.add_argument('dataset', nargs='?')
 
     args = parser.parse_args()
-    assert args.mode in ['finetune', 'generate'], "Mode must be 'finetune' or 'generate'"
+    assert args.mode in ['finetune', 'generate', 'list_models'], "Mode must be 'finetune', 'generate' or 'list_models'"
 
     if args.mode == 'list_models':
         cmd_list_models()
@@ -782,7 +782,7 @@ def cmd():
                      top_k=args.top_k, top_p=args.top_p, multi_gpu=args.multi_gpu)
 
         
-def cmd_list_models:
+def cmd_list_models():
     """Wrapper script for listing available models via the CLI."""
     regex = r"models\/(\d*M)\/"
     model_bucket = urllib.request.urlopen(url_base)
