@@ -298,15 +298,12 @@ def finetune(sess,
                     index + 1, text)
                 all_text.append(text)
                 index += 1
-        print(text.replace(u'\xa0', u' '))
+        print(text)
         maketree(os.path.join(SAMPLE_DIR, run_name))
         with open(
                 os.path.join(SAMPLE_DIR, run_name,
                              'samples-{}').format(counter), 'w') as fp:
-            try:
                 fp.write('\n'.join(all_text))
-            except Exception as e:
-                pass
 
     def sample_batch():
         return [data_sampler.sample(1024) for _ in range(batch_size)]
