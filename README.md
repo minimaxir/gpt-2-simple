@@ -26,7 +26,7 @@ You will also need to install the corresponding TensorFlow for your system (e.g.
 
 ## Usage
 
-An example for downloading the model to the local system, fineturning it on a dataset. and generating some text.
+An example for downloading the model to the local system, finetuning it on a dataset. and generating some text.
 
 Warning: the pretrained 124M model, and thus any finetuned model, is 500 MB! (the pretrained 355M model is 1.5 GB)
 
