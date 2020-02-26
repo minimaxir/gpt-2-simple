@@ -418,6 +418,30 @@ def load_gpt2(
     saver.restore(sess, ckpt)
 
 
+def get_checkpoint_path(
+    run_name="run1",
+    checkpoint_dir="checkpoint",
+    model_name=None,
+    model_dir="models",
+):
+    if model_name:
+        checkpoint_path = os.path.join(model_dir, model_name)
+    else:
+        checkpoint_path = os.path.join(checkpoint_dir, run_name)
+    return checkpoint_path
+
+
+def get_encoder(checkpoint_path):
+    return encoder.get_encoder(checkpoint_path)
+
+
+def get_hparams(checkpoint_path):
+    hparams = model.default_hparams()
+    with open(os.path.join(checkpoint_path, "hparams.json")) as f:
+        hparams.override_from_dict(json.load(f))
+    return hparams
+
+
 def generate(
     sess,
     run_name="run1",
@@ -438,6 +462,8 @@ def generate(
     top_k=0,
     top_p=0.0,
     include_prefix=True,
+    enc=None,
+    hparams=None,
 ):
     """Generates text from a model loaded into memory.
 
@@ -454,15 +480,12 @@ def generate(
     if prefix == "":
         prefix = None
 
-    if model_name:
-        checkpoint_path = os.path.join(model_dir, model_name)
-    else:
-        checkpoint_path = os.path.join(checkpoint_dir, run_name)
+    checkpoint_path = get_checkpoint_path(run_name, checkpoint_dir, model_name, checkpoint_dir)
 
-    enc = encoder.get_encoder(checkpoint_path)
-    hparams = model.default_hparams()
-    with open(os.path.join(checkpoint_path, "hparams.json")) as f:
-        hparams.override_from_dict(json.load(f))
+    if enc is None:
+        enc = get_encoder(checkpoint_path)
+    if hparams is None:
+        hparams = get_hparams(checkpoint_path)
 
     if prefix:
         context = tf.compat.v1.placeholder(tf.int32, [batch_size, None])
