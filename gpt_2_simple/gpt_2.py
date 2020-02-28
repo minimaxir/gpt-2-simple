@@ -362,6 +362,7 @@ def finetune(sess,
 
 
 def load_gpt2(sess,
+              checkpoint='latest',
               run_name="run1",
               checkpoint_dir="checkpoint",
               model_name=None,
@@ -388,7 +389,11 @@ def load_gpt2(sess,
 
     output = model.model(hparams=hparams, X=context, gpus=gpus)
 
-    ckpt = tf.train.latest_checkpoint(checkpoint_path)
+    if checkpoint=='latest':
+        ckpt = tf.train.latest_checkpoint(checkpoint_path)
+    else:
+        ckpt = os.path.join(checkpoint_path,checkpoint)
+
     saver = tf.compat.v1.train.Saver(allow_empty=True)
     sess.run(tf.compat.v1.global_variables_initializer())
 
