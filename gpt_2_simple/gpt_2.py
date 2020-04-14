@@ -497,7 +497,7 @@ def generate(sess,
                     text = np.append(context_tokens[i][:1], text)
                 if truncate or all(gen_text):
                     context_tokens[i] = out[i][int(len(out[i])*(1-split_context)):]
-                    if gen_text[i]:
+                    if gen_text[i].any():
                         text = out[i][int(len(out[i])*(split_context)):]
 
                     if truncate:
