@@ -443,6 +443,8 @@ def generate(sess,
         assert truncate is not None, "If generating a non-fixed length \
                 sample, must have a truncation term."
 
+    assert 0 < split_context < 1
+
     if model_name:
         checkpoint_path = os.path.join(model_dir, model_name)
     else:
@@ -496,8 +498,7 @@ def generate(sess,
                     continue
                 text = out[i]
                 trunc_text = ""
-                if prefix:
-                    text = np.append(context_tokens[i][:1], text)
+                text = np.append(context_tokens[i][:1], text)
                 if truncate or all(gen_text):
                     context_tokens[i] = out[i][int(len(out[i])*(1-split_context)):]
                     if gen_text[i].any():
@@ -518,8 +519,7 @@ def generate(sess,
                             text = enc.encode(trunc_text.group(1))
                             # better to re-encode here then decode every generation cycle, I think
 
-                if not truncated[i]:
-                    gen_text[i] = np.concatenate((gen_text[i], text), axis=None)
+                gen_text[i] = np.concatenate((gen_text[i], text), axis=None)
                 if trunc_text or (length is not None and total_tokens >= length-1):
                     # note this means you may get a generation of size greater than length in some cases
                     # as it does not remove the tokens past length
