@@ -480,6 +480,8 @@ def generate(sess,
         total_tokens = 0
         if prefix:
             context_tokens = [prefix_enc] * batch_size
+        else: 
+            context_tokens = [[enc.encoder['<|endoftext|>']]] * batch_size
 
         while False in truncated:
             num_tokens = 1023 - (len(context_tokens[0]))
@@ -784,7 +786,7 @@ def cmd():
         '--multi_gpu',  help="[generate/finetune] Attempt to allocate multiple GPUs for running.",
         nargs='?', default=True, type=lambda x: (str(x).lower() == 'true'))
     parser.add_argument(
-        '--split_context',  help="[generate] When generating a sample longer than 1023 tokens, feed this proporti    on of previous generation as context.",
+        '--split_context',  help="[generate] When generating a sample longer than 1023 tokens, feed this proportion of previous generation as context.",
         nargs='?', default=0.5, type=float)
 
     # Positional arguments
