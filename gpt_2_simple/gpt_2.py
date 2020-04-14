@@ -464,6 +464,7 @@ def generate(sess,
     output = sample.sample_sequence(
         hparams=hparams,
         length=min(length, 1023 - (len(prefix_enc) if prefix else 0)),
+        start_token=enc.encoder['<|endoftext|>'] if not prefix else None,
         context=context if prefix else None,
         batch_size=batch_size,
         temperature=temperature, top_k=top_k, top_p=top_p
