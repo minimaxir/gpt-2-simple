@@ -494,8 +494,6 @@ def generate(sess,
             total_tokens += num_tokens
 
             for i in range(batch_size):
-                if truncated[i]:
-                    continue
                 text = out[i]
                 trunc_text = ""
                 text = np.append(context_tokens[i][:1], text)
@@ -519,17 +517,18 @@ def generate(sess,
                             text = enc.encode(trunc_text.group(1))
                             # better to re-encode here then decode every generation cycle, I think
 
-                gen_text[i] = np.concatenate((gen_text[i], text), axis=None)
-                if trunc_text or (length is not None and total_tokens >= length-1):
-                    # note this means you may get a generation of size greater than length in some cases
-                    # as it does not remove the tokens past length
-                    truncated[i] = True
-                    gen = enc.decode(gen_text[i]).lstrip('\n')
-                    if destination_path:
-                        f.write("{}\n{}".format(gen, sample_delim))
-                    if not return_as_list and not destination_path:
-                        print("{}\n{}".format(gen, sample_delim), end='')
-                    gen_texts.append(gen)
+                if not truncated[i]:
+                    gen_text[i] = np.concatenate((gen_text[i], text), axis=None)
+                    if trunc_text or (length is not None and total_tokens >= length-1):
+                        # note this means you may get a generation of size greater than length in some cases
+                        # as it does not remove the tokens past length
+                        truncated[i] = True
+                        gen = enc.decode(gen_text[i]).lstrip('\n')
+                        if destination_path:
+                            f.write("{}\n{}".format(gen, sample_delim))
+                        if not return_as_list and not destination_path:
+                            print("{}\n{}".format(gen, sample_delim), end='')
+                        gen_texts.append(gen)
 
         generated += batch_size
 
