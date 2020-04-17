@@ -471,6 +471,7 @@ def generate(sess,
         batch_size=batch_size,
         temperature=temperature, top_k=top_k, top_p=top_p
     )[:, 1:]
+    split_length = int(1023 * split_context)
 
     if destination_path:
         f = open(destination_path, 'w')
@@ -479,29 +480,44 @@ def generate(sess,
     while generated < nsamples:
         gen_text = [np.array([])] * batch_size
         truncated = [False] * batch_size
+
         if prefix:
             context_tokens = [prefix_enc] * batch_size
         else: 
             context_tokens = [[enc.encoder['<|endoftext|>']]] * batch_size
-        
+
         total_tokens = len(context_tokens[0])
+        generated_once = False
 
         while False in truncated:
             num_tokens = 1023 - (len(context_tokens[0]))
-            out = sess.run(output, feed_dict={
+            if generated_once:
+                split_output = sample.sample_sequence(
+                    hparams=hparams,
+                    length=min(length - total_tokens, 1023 - split_length),
+                    start_token=enc.encoder['<|endoftext|>'] if not prefix else None,
+                    context=context if prefix else None,
+                    batch_size=batch_size,
+                    temperature=temperature, top_k=top_k, top_p=top_p
+                )[:, 1:]
+                out = sess.run(split_output, feed_dict={
+                    context: context_tokens
+                })
+
+            else:
+                out = sess.run(output, feed_dict={
                     context: context_tokens
                 })
 
             total_tokens += num_tokens
-
             for i in range(batch_size):
                 text = out[i]
                 trunc_text = ""
                 text = np.append(context_tokens[i][:1], text)
                 if truncate or all(gen_text):
-                    context_tokens[i] = out[i][int(len(out[i])*(1-split_context)):]
-                    if gen_text[i].any():
-                        text = out[i][int(len(out[i])*(split_context)):]
+                    context_tokens[i] = out[i][split_length:]
+                    if generated_once:
+                        text = out[i][(1023 - split_length):]
 
                     if truncate:
                         to_trunc = enc.decode(text)
@@ -521,8 +537,6 @@ def generate(sess,
                 if not truncated[i]:
                     gen_text[i] = np.concatenate((gen_text[i], text), axis=None)
                     if trunc_text or (length is not None and total_tokens >= length-1):
-                        # note this means you may get a generation of size greater than length in some cases
-                        # as it does not remove the tokens past length
                         truncated[i] = True
                         gen = enc.decode(gen_text[i]).lstrip('\n')
                         if destination_path:
@@ -530,6 +544,7 @@ def generate(sess,
                         if not return_as_list and not destination_path:
                             print("{}\n{}".format(gen, sample_delim), end='')
                         gen_texts.append(gen)
+            generated_once = True
 
         generated += batch_size
 
