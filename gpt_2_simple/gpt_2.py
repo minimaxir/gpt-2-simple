@@ -479,11 +479,12 @@ def generate(sess,
     while generated < nsamples:
         gen_text = [np.array([])] * batch_size
         truncated = [False] * batch_size
-        total_tokens = 0
         if prefix:
             context_tokens = [prefix_enc] * batch_size
         else: 
             context_tokens = [[enc.encoder['<|endoftext|>']]] * batch_size
+        
+        total_tokens = len(context_tokens[0])
 
         while False in truncated:
             num_tokens = 1023 - (len(context_tokens[0]))
