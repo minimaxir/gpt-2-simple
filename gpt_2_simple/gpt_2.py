@@ -471,7 +471,17 @@ def generate(sess,
         batch_size=batch_size,
         temperature=temperature, top_k=top_k, top_p=top_p
     )[:, 1:]
+
     split_length = int(1023 * split_context)
+    split_output_length = min(length, 1023 - split_length)
+    split_output = sample.sample_sequence(
+        hparams=hparams,
+        length=split_output_length,
+        start_token=enc.encoder['<|endoftext|>'] if not prefix else None,
+        context=context if prefix else None,
+        batch_size=batch_size,
+        temperature=temperature, top_k=top_k, top_p=top_p
+    )[:, 1:]
 
     if destination_path:
         f = open(destination_path, 'w')
@@ -492,16 +502,20 @@ def generate(sess,
         while False in truncated:
             num_tokens = 1023 - (len(context_tokens[0]))
             if generated_once:
-                split_output = sample.sample_sequence(
-                    hparams=hparams,
-                    length=min(length - total_tokens, 1023 - split_length),
-                    start_token=enc.encoder['<|endoftext|>'] if not prefix else None,
-                    context=context if prefix else None,
-                    batch_size=batch_size,
-                    temperature=temperature, top_k=top_k, top_p=top_p
-                )[:, 1:]
+                new_split_output_length = min(length - total_tokens, 1023 - split_length)
+                if new_split_output_length != split_output_length: 
+                    split_output = sample.sample_sequence(
+                        hparams=hparams,
+                        length=new_split_output_length,
+                        start_token=enc.encoder['<|endoftext|>'] if not prefix else None,
+                        context=context if prefix else None,
+                        batch_size=batch_size,
+                        temperature=temperature, top_k=top_k, top_p=top_p
+                    )[:, 1:]
                 out = sess.run(split_output, feed_dict={
                     context: context_tokens
+                    # TODO if a particular item in a batch is finished, its context can be dropped
+                    # (but we need to keep track of which output index corresponds to which batch item then)
                 })
 
             else:
