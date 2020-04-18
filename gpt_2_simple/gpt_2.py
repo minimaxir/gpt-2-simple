@@ -514,8 +514,6 @@ def generate(sess,
                     )[:, 1:]
                 out = sess.run(split_output, feed_dict={
                     context: context_tokens
-                    # TODO if a particular item in a batch is finished, its context can be dropped
-                    # (but we need to keep track of which output index corresponds to which batch item then)
                 })
 
             else:
@@ -527,11 +525,12 @@ def generate(sess,
             for i in range(batch_size):
                 text = out[i]
                 trunc_text = ""
-                text = np.append(context_tokens[i][:1], text)
+                if prefix: 
+                    text = np.append(context_tokens[i][:1], text)
                 if truncate or all(gen_text):
-                    context_tokens[i] = out[i][split_length:]
+                    context_tokens[i] = out[i][(1023 - split_length - 1):]
                     if generated_once:
-                        text = out[i][(1023 - split_length):]
+                        text = out[i][split_length:]
 
                     if truncate:
                         to_trunc = enc.decode(text)
