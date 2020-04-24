@@ -1,4 +1,4 @@
-tensorflow
+tensorflow==1.15
 regex
 requests
 tqdm
