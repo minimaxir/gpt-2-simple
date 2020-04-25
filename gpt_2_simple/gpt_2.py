@@ -14,6 +14,7 @@ import time
 from datetime import datetime
 import csv
 import argparse
+import urllib.request
 
 # if in Google Colaboratory
 try:
@@ -29,6 +30,8 @@ assert tf.__version__ < '2.0.0', "gpt-2-simple currently does not support " \
     "TensorFlow 2.0. You'll need to use a virtualenv/cloud computer which " \
     "has Tensorflow 1.X on it."
 
+
+url_base = "https://storage.googleapis.com/gpt-2"
 
 def download_file_with_progress(url_base, sub_dir, model_name, file_name):
     """General utility for incrementally downloading files from the internet
@@ -87,7 +90,7 @@ def download_gpt2(model_dir='models', model_name='124M'):
     for file_name in ['checkpoint', 'encoder.json', 'hparams.json',
                       'model.ckpt.data-00000-of-00001', 'model.ckpt.index',
                       'model.ckpt.meta', 'vocab.bpe']:
-        download_file_with_progress(url_base="https://storage.googleapis.com/gpt-2",
+        download_file_with_progress(url_base=url_base,
                                     sub_dir=sub_dir,
                                     model_name=model_name,
                                     file_name=file_name)
@@ -672,7 +675,7 @@ def cmd():
     # Explicit arguments
     
     parser.add_argument(
-        '--mode', help='Mode for using the CLI (either "finetune" or "generate") [Required]', nargs='?')
+        '--mode', help='Mode for using the CLI (either "finetune", "generate" or "list_models") [Required]', nargs='?')
     parser.add_argument(
         '--run_name',  help="[finetune/generate] Run number to save/load the model",
         nargs='?', default='run1')
@@ -755,8 +758,10 @@ def cmd():
     parser.add_argument('dataset', nargs='?')
 
     args = parser.parse_args()
-    assert args.mode in ['finetune', 'generate'], "Mode must be 'finetune' or 'generate'"
+    assert args.mode in ['finetune', 'generate', 'list_models'], "Mode must be 'finetune', 'generate' or 'list_models'"
 
+    if args.mode == 'list_models':
+        cmd_list_models()
     if args.mode == 'finetune':
         assert args.dataset is not None, "You need to provide a dataset."
 
@@ -781,6 +786,18 @@ def cmd():
                      checkpoint_dir=args.checkpoint_dir,
                      top_k=args.top_k, top_p=args.top_p, multi_gpu=args.multi_gpu)
 
+        
+def cmd_list_models():
+    """Wrapper script for listing available models via the CLI."""
+    regex = r"models\/(\d*M)\/"
+    model_bucket = urllib.request.urlopen(url_base)
+    model_bucket_content = model_bucket.read()
+
+    available_models = dict()
+    matches = re.finditer(regex, str(model_bucket_content), re.MULTILINE)
+    available_models = list(dict.fromkeys([match.group(1) for match in matches]))
+    available_models.sort(key=lambda x:int(x[:-1]))
+    print(available_models)
 
 def cmd_finetune(dataset, run_name, checkpoint_dir, model_name, model_dir, steps,
                  restore_from, sample_every,
