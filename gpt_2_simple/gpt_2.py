@@ -146,7 +146,8 @@ def finetune(sess,
              use_memory_saving_gradients=False,
              only_train_transformer_layers=False,
              optimizer='adam',
-             overwrite=False):
+             overwrite=False,
+             reuse=False):
     """Finetunes the model on the given dataset.
 
     Adapted from https://github.com/nshepperd/gpt-2/blob/finetuning/train.py.
@@ -195,7 +196,7 @@ def finetune(sess,
     if multi_gpu:
         gpus = get_available_gpus()
 
-    output = model.model(hparams=hparams, X=context, gpus=gpus)
+    output = model.model(hparams=hparams, X=context, gpus=gpus, reuse=reuse)
     loss = tf.reduce_mean(
         input_tensor=tf.nn.sparse_softmax_cross_entropy_with_logits(
             labels=context[:, 1:], logits=output['logits'][:, :-1]))
