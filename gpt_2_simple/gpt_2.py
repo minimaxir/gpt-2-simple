@@ -51,7 +51,7 @@ def download_file_with_progress(url_base, sub_dir, model_name, file_name):
 
     # set to download 1MB at a time. This could be much larger with no issue
     DOWNLOAD_CHUNK_SIZE = 1024 * 1024
-    r = requests.get(url_base + "/models/" + model_name + "/" + file_name, stream=True)
+    r = requests.get(f"{url_base}/models/{model_name}/{file_name}", stream=True)
     with open(os.path.join(sub_dir, file_name), 'wb') as f:
         file_size = int(r.headers["content-length"])
         with tqdm(ncols=100, desc="Fetching " + file_name,
@@ -275,8 +275,7 @@ def finetune(sess,
         maketree(checkpoint_path)
         print(
             'Saving',
-            os.path.join(checkpoint_path,
-                         'model-{}').format(counter-1))
+            os.path.join(checkpoint_path, f"model-{counter-1}"))
         saver.save(
             sess,
             os.path.join(checkpoint_path, 'model'),
@@ -294,15 +293,13 @@ def finetune(sess,
                 feed_dict={context: batch_size * [context_tokens]})
             for i in range(min(sample_num - index, batch_size)):
                 text = enc.decode(out[i])
-                text = '======== SAMPLE {} ========\n{}\n'.format(
-                    index + 1, text)
+                text = f'======== SAMPLE {index + 1} ========\n{text}\n'
                 all_text.append(text)
                 index += 1
         print(text)
         maketree(os.path.join(SAMPLE_DIR, run_name))
         with open(
-                os.path.join(SAMPLE_DIR, run_name,
-                             'samples-{}').format(counter), 'w') as fp:
+                os.path.join(SAMPLE_DIR, run_name, f"samples-{counter}.txt", 'w') as fp:
             fp.write('\n'.join(all_text))
 
     def sample_batch():
@@ -348,12 +345,12 @@ def finetune(sess,
                             avg_loss[1] * 0.99 + 1.0)
 
                 print(
-                    '[{counter} | {time:2.2f}] loss={loss:2.2f} avg={avg:2.2f}'
+                    '[{} | {2.2f}] loss={2.2f} avg={2.2f}'
                     .format(
-                        counter=counter,
-                        time=time.time() - start_time,
-                        loss=v_loss,
-                        avg=avg_loss[0] / avg_loss[1]))
+                        counter,
+                        time.time() - start_time,
+                        v_loss,
+                        avg_loss[0] / avg_loss[1]))
 
             counter += 1
     except KeyboardInterrupt:
@@ -573,10 +570,10 @@ def copy_checkpoint_to_gdrive(run_name='run1', copy_folder=False):
     """Copies the checkpoint folder to a mounted Google Drive."""
     is_mounted()
 
-    checkpoint_folder = os.path.join('checkpoint', run_name)
+    checkpoint_folder = f'checkpoint/{run_name}'
 
     if copy_folder:
-        shutil.copytree(checkpoint_folder, "/content/drive/My Drive/" + checkpoint_folder)
+        shutil.copytree(checkpoint_folder, f"/content/drive/My Drive/{checkpoint_folder}")
     else:
         file_path = get_tarfile_name(checkpoint_folder)
 
@@ -584,21 +581,21 @@ def copy_checkpoint_to_gdrive(run_name='run1', copy_folder=False):
         with tarfile.open(file_path, 'w') as tar:
             tar.add(checkpoint_folder)
 
-        shutil.copyfile(file_path, "/content/drive/My Drive/" + file_path)
+        shutil.copyfile(file_path, f"/content/drive/My Drive/{file_path}")
 
 
 def copy_checkpoint_from_gdrive(run_name='run1', copy_folder=False):
     """Copies the checkpoint folder from a mounted Google Drive."""
     is_mounted()
 
-    checkpoint_folder = os.path.join('checkpoint', run_name)
+    checkpoint_folder = f'checkpoint/{run_name}'
 
     if copy_folder:
-        shutil.copytree("/content/drive/My Drive/" + checkpoint_folder, checkpoint_folder)
+        shutil.copytree(f"/content/drive/My Drive/{checkpoint_folder}", checkpoint_folder)
     else:
         file_path = get_tarfile_name(checkpoint_folder)
 
-        shutil.copyfile("/content/drive/My Drive/" + file_path, file_path)
+        shutil.copyfile(f"/content/drive/My Drive/{file_path}", file_path)
 
         with tarfile.open(file_path, 'r') as tar:
             tar.extractall()
@@ -608,14 +605,14 @@ def copy_file_to_gdrive(file_path):
     """Copies a file to a mounted Google Drive."""
     is_mounted()
 
-    shutil.copyfile(file_path, "/content/drive/My Drive/" + file_path)
+    shutil.copyfile(file_path, f"/content/drive/My Drive/{file_path}")
 
 
 def copy_file_from_gdrive(file_path):
     """Copies a file from a mounted Google Drive."""
     is_mounted()
 
-    shutil.copyfile("/content/drive/My Drive/" + file_path, file_path)
+    shutil.copyfile(f"/content/drive/My Drive/{file_path}", file_path)
 
 
 def is_gpt2_downloaded(model_dir='models', model_name='124M'):
