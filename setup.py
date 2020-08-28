@@ -61,7 +61,7 @@ setup(
     entry_points={
         'console_scripts': ['gpt_2_simple=gpt_2_simple.gpt_2:cmd'],
     },
-    python_requires='>=3.5',
+    python_requires='>=3.5, <=3.6',
     include_package_data=True,
     install_requires=['tensorflow<2', 'regex', 'requests', 'tqdm', 'numpy', 'toposort']
 )
