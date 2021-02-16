@@ -9,11 +9,11 @@ class HParams():
         self.n_embd = n_embd
         self.n_head = n_head
         self.n_layer = n_layer
-        
+
     def override_from_dict(self, param_dict):
         try:
             self.n_vocab = param_dict['n_vocab']
-        except: 
+        except:
             pass
         try:
             self.n_ctx = param_dict['n_ctx']
