@@ -494,7 +494,7 @@ def generate(sess,
                     gen_text = trunc_text.group(1)
             gen_text = gen_text.lstrip('\n')
             if destination_path:
-                f.write("{}\n{}".format(gen_text, sample_delim))
+                f.write("{}\n{}".format(gen_text, sample_delim), encoding='utf-8')
             if not return_as_list and not destination_path:
                 print("{}\n{}".format(gen_text, sample_delim), end='')
             gen_texts.append(gen_text)
