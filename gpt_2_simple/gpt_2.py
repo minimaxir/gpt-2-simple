@@ -14,6 +14,7 @@ import time
 from datetime import datetime
 import csv
 import argparse
+from sys import exit
 
 # if in Google Colaboratory
 try:
