@@ -87,7 +87,7 @@ def download_gpt2(model_dir='models', model_name='124M'):
     for file_name in ['checkpoint', 'encoder.json', 'hparams.json',
                       'model.ckpt.data-00000-of-00001', 'model.ckpt.index',
                       'model.ckpt.meta', 'vocab.bpe']:
-        download_file_with_progress(url_base="https://storage.googleapis.com/gpt-2",
+        download_file_with_progress(url_base="https://openaipublic.blob.core.windows.net/gpt-2",
                                     sub_dir=sub_dir,
                                     model_name=model_name,
                                     file_name=file_name)

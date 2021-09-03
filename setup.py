@@ -1,6 +1,6 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
-long_description = '''
+long_description = """
 A simple Python package that wraps existing model fine-tuning and generation scripts for OpenAI GPT-2 text generation model (specifically the "small", 124M hyperparameter version). Additionally, this package allows easier generation of text, generating to a file for easy curation, allowing for prefixes to force the text to start with a given phrase.
 
 ## Usage
@@ -41,27 +41,27 @@ print(single_text)
 You can pass a `run_name` parameter to `finetune` and `load_gpt2` if you want to store/load multiple models in a `checkpoint` folder.
 
 NB: *Restart the Python session first* if you want to finetune on another dataset or load another model.
-'''
+"""
 
 
 setup(
-    name='gpt_2_simple',
-    packages=['gpt_2_simple'],  # this must be the same as the name above
-    version='0.7.2',
-    description="Python package to easily retrain OpenAI's GPT-2 " \
+    name="gpt_2_simple",
+    packages=["gpt_2_simple"],  # this must be the same as the name above
+    version="0.7.2",
+    description="Python package to easily retrain OpenAI's GPT-2 "
     "text-generating model on new texts.",
     long_description=long_description,
-    long_description_content_type='text/markdown',
-    author='Max Woolf',
-    author_email='max@minimaxir.com',
-    url='https://github.com/minimaxir/gpt-2-simple',
-    keywords=['deep learning', 'tensorflow', 'text generation'],
+    long_description_content_type="text/markdown",
+    author="Max Woolf",
+    author_email="max@minimaxir.com",
+    url="https://github.com/minimaxir/gpt-2-simple",
+    keywords=["deep learning", "tensorflow", "text generation"],
     classifiers=[],
-    license='MIT',
+    license="MIT",
     entry_points={
-        'console_scripts': ['gpt_2_simple=gpt_2_simple.gpt_2:cmd'],
+        "console_scripts": ["gpt_2_simple=gpt_2_simple.gpt_2:cmd"],
     },
-    python_requires='>=3.5',
+    python_requires=">=3.6",
     include_package_data=True,
-    install_requires=['regex', 'requests', 'tqdm', 'numpy', 'toposort']
+    install_requires=["regex", "requests", "tqdm", "numpy", "toposort"],
 )
