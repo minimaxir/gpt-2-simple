@@ -2,9 +2,16 @@ from toposort import toposort
 import contextlib
 import numpy as np
 import tensorflow as tf
-import tensorflow.contrib.graph_editor as ge
 import time
 import sys
+
+# tensorflow 1
+try:
+    import tensorflow.contrib.graph_editor as ge
+# tensorflow 2
+except:
+    pass
+
 sys.setrecursionlimit(10000)
 # refers back to current module if we decide to split helpers out
 util = sys.modules[__name__]
