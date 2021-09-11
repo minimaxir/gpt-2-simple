@@ -465,15 +465,15 @@ def generate(sess,
 
     output = sample.sample_sequence(
         hparams=hparams,
-        length=min(length, 1023 - (len(prefix_enc) if prefix else 0)),
+        length=min(length, length - (len(prefix_enc) if prefix else 0)),
         start_token=enc.encoder['<|endoftext|>'] if not prefix else None,
         context=context if prefix else None,
         batch_size=batch_size,
         temperature=temperature, top_k=top_k, top_p=top_p
     )[:, 1:]
 
-    split_length = int(1023 * split_context)
-    split_output_length = min(length, 1023 - split_length)
+    split_length = int(length * split_context)
+    split_output_length = min(length, length - split_length)
     split_output = sample.sample_sequence(
         hparams=hparams,
         length=split_output_length,
@@ -500,9 +500,9 @@ def generate(sess,
         generated_once = False
 
         while False in truncated:
-            num_tokens = 1023 - (len(context_tokens[0]))
+            num_tokens = length - (len(context_tokens[0]))
             if generated_once:
-                new_split_output_length = min(length - total_tokens, 1023 - split_length)
+                new_split_output_length = min(length - total_tokens, length - split_length)
                 if new_split_output_length != split_output_length: 
                     split_output = sample.sample_sequence(
                         hparams=hparams,
@@ -528,7 +528,7 @@ def generate(sess,
                 if prefix: 
                     text = np.append(context_tokens[i][:1], text)
                 if truncate or all(gen_text):
-                    context_tokens[i] = out[i][(1023 - split_length - 1):]
+                    context_tokens[i] = out[i][(length - split_length - 1):]
                     if generated_once:
                         text = out[i][split_length:]
 
