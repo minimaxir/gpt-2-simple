@@ -14,6 +14,8 @@ For finetuning, it is **strongly** recommended to use a GPU, although you can ge
 
 You can use gpt-2-simple to retrain a model using a GPU **for free** in [this Colaboratory notebook](https://colab.research.google.com/drive/1VLG8e7YSEwypxU-noRNhsv5dW4NfTGce), which also demos additional features of the package.
 
+Note: Development on gpt-2-simple has mostly been superceded by [aitextgen](https://github.com/minimaxir/aitextgen), which has similar AI text generation capabilities with more efficient training time and resource usage. If you do not require using TensorFlow, I recommend using aitextgen instead. Checkpoints trained using gpt-2-simple can be [loaded using aitextgen](https://docs.aitextgen.io/gpt-2-simple/) as well.
+
 ## Install
 
 gpt-2-simple can be installed [via PyPI](https://pypi.org/project/gpt_2_simple/):
