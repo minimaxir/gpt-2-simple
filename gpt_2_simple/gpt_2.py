@@ -306,7 +306,7 @@ def finetune(sess,
         with open(
                 os.path.join(SAMPLE_DIR, run_name,
                              'samples-{}').format(counter), 'w') as fp:
-            fp.write('\n'.join(all_text))
+                fp.write('\n'.join(all_text))
 
     def sample_batch():
         return [data_sampler.sample(1024) for _ in range(batch_size)]
@@ -482,25 +482,42 @@ def generate(sess,
         for i in range(batch_size):
             generated += 1
             gen_text = enc.decode(out[i])
+            # process the text to strip out the prefix and/or end at the truncate text
             if prefix:
                 gen_text = enc.decode(context_tokens[:1]) + gen_text
             if truncate:
                 truncate_esc = re.escape(truncate)
                 if prefix and not include_prefix:
                     prefix_esc = re.escape(prefix)
-                    pattern = '(?:{})(.*?)(?:{})'.format(prefix_esc,
-                                                         truncate_esc)
+                    pattern = '(?:{})(.*?)(?:{})'.format(prefix_esc, truncate_esc)
                 else:
                     pattern = '(.*?)(?:{})'.format(truncate_esc)
 
                 trunc_text = re.search(pattern, gen_text, re.S)
                 if trunc_text:
                     gen_text = trunc_text.group(1)
-            gen_text = gen_text.lstrip('\n')
-            if destination_path:
-                f.write("{}\n{}".format(gen_text, sample_delim))
-            if not return_as_list and not destination_path:
-                print("{}\n{}".format(gen_text, sample_delim), end='')
+                # the generated text sometimes doesn't include the truncate text, but we can try again to just strip out the prefix (if it exists), leaving only the new gen_text
+                elif not trunc_text and prefix:
+                    pattern = '(?:{})(.*)'.format(prefix_esc)
+                    trunc_text = re.search(pattern, gen_text, re.S)
+                    if trunc_text:
+                        gen_text = trunc_text.group(1)
+
+            # truncate is not set, but we should still strip the prefix, if set and requested
+            else:
+                if prefix and not include_prefix:
+                    prefix_esc = re.escape(prefix)
+                    pattern = '(?:{})(.*)'.format(prefix_esc)
+                    trunc_text = re.search(pattern, gen_text, re.S)
+                    if trunc_text: 
+                        gen_text = trunc_text.group(1)
+            try:
+                    if destination_path:
+                        f.write("{}\n{}".format(gen_text, sample_delim))
+                    if not return_as_list and not destination_path:
+                        print("{}\n{}".format(gen_text, sample_delim), end='')
+            except Exception as e:
+                pass
             gen_texts.append(gen_text)
 
     if destination_path:
