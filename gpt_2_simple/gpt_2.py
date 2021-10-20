@@ -619,7 +619,8 @@ def copy_file_from_gdrive(file_path):
     """Copies a file from a mounted Google Drive."""
     is_mounted()
 
-    shutil.copyfile("/content/drive/My Drive/" + file_path, file_path)
+    file_name = os.path.split(file_path)[1]
+    shutil.copyfile("/content/drive/My Drive/" + file_path, file_name)
 
 
 def is_gpt2_downloaded(model_dir='models', model_name='124M'):
