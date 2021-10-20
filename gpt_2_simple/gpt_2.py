@@ -305,7 +305,7 @@ def finetune(sess,
         maketree(os.path.join(SAMPLE_DIR, run_name))
         with open(
                 os.path.join(SAMPLE_DIR, run_name,
-                             'samples-{}').format(counter), 'w') as fp:
+                             'samples-{}').format(counter), 'w', encoding='utf-8') as fp:
             fp.write('\n'.join(all_text))
 
     def sample_batch():
@@ -469,7 +469,7 @@ def generate(sess,
     )[:, 1:]
 
     if destination_path:
-        f = open(destination_path, 'w')
+        f = open(destination_path, 'w', encoding='utf-8')
     generated = 0
     gen_texts = []
     while generated < nsamples:
