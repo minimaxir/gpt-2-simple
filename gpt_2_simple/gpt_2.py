@@ -15,6 +15,7 @@ from datetime import datetime
 import csv
 import argparse
 from sys import exit
+import codecs
 
 # if in Google Colaboratory
 try:
@@ -303,9 +304,9 @@ def finetune(sess,
                 index += 1
         print(text)
         maketree(os.path.join(SAMPLE_DIR, run_name))
-        with open(
+        with codecs.open(
                 os.path.join(SAMPLE_DIR, run_name,
-                             'samples-{}').format(counter), 'w') as fp:
+                             'samples-{}').format(counter), 'w', 'utf8') as fp:
             fp.write('\n'.join(all_text))
 
     def sample_batch():
@@ -469,7 +470,7 @@ def generate(sess,
     )[:, 1:]
 
     if destination_path:
-        f = open(destination_path, 'w')
+        f = codecs.open(destination_path, 'w', 'utf-8')
     generated = 0
     gen_texts = []
     while generated < nsamples:
