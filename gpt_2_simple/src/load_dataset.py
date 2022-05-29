@@ -36,7 +36,7 @@ def load_dataset(enc, path, combine):
                 fp.readline()   # skip header
                 reader = csv.reader(fp)
                 for row in reader:
-                    raw_text += start_token + row[0] + end_token + "\n"
+                    raw_text += start_token + ''.join(row) + end_token + "\n"
         else:
             # Plain text
             with open(path, 'r', encoding='utf8', errors='ignore') as fp:
