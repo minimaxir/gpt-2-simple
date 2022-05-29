@@ -26,7 +26,7 @@ def load_dataset(enc, path, combine):
     for path in tqdm.tqdm(paths):
         if path.endswith('.npz'):
             # Pre-encoded
-            with np.load(path) as npz:
+            with np.load(path,allow_pickle=True) as npz:
                 for item in npz.files:
                     token_chunks.append(npz[item])
         elif path.endswith('.csv'):
